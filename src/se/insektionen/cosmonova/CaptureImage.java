@@ -1,4 +1,4 @@
-package se.insektionen.cosmonova;
+﻿package se.insektionen.cosmonova;
 
 import com.googlecode.javacv.OpenCVFrameGrabber;
 import com.googlecode.javacv.cpp.opencv_core.IplImage; 

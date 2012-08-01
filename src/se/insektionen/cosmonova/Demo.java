@@ -1,4 +1,4 @@
-package se.insektionen.cosmonova;
+﻿package se.insektionen.cosmonova;
 
 import com.googlecode.javacpp.Loader;
 import com.googlecode.javacv.*;

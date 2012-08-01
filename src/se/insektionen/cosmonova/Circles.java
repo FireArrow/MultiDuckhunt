@@ -1,4 +1,4 @@
-package se.insektionen.cosmonova;
+﻿package se.insektionen.cosmonova;
 import static com.googlecode.javacv.cpp.opencv_core.CV_AA;
 import static com.googlecode.javacv.cpp.opencv_core.cvClearMemStorage;
 import static com.googlecode.javacv.cpp.opencv_core.cvDrawContours;

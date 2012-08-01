@@ -1,4 +1,10 @@
-package se.insektionen.cosmonova;
+﻿package se.insektionen.cosmonova;
+
+
+//Primär klass för att läsa av bilder från en webkamera. 
+//Den är beroende av att man har JavaCV: http://code.google.com/p/javacv/
+//som i sin tur är beroende av OpenCV. Läs mer om, och hitta länkar till det, på http://code.google.com/p/javacv/wiki/Windows7AndOpenCV
+//
 
 import static com.googlecode.javacv.cpp.opencv_core.CV_AA;
 import static com.googlecode.javacv.cpp.opencv_core.cvCircle;
@@ -36,7 +42,7 @@ import static com.googlecode.javacv.cpp.opencv_imgproc.*;
 import static com.googlecode.javacv.cpp.opencv_calib3d.*;
 import static com.googlecode.javacv.cpp.opencv_objdetect.*;
 
-//F�rkortning f�r Cosmonova Invaders - Shoot Them All
+//Förkortning för Cosmonova Invaders - Shoot Them All
 public class CISTA {
 	
 	//Colors given in order BGR-A, Blue, Green, Red, Alpha
@@ -101,11 +107,11 @@ public class CISTA {
 				
 				FloatPointer point = new FloatPointer(cvGetSeqElem(seq, i));
 				
-				//Rita cirkeln p� bilden
+				//Rita cirkeln på bilden
 				paintCircle(point, grabbedImage);
 				
 				//Skicka koordinaten till server
-				float[] points = { point.get(0), point.get(1) };
+				addPointToSendQueue(point);
 			}
 //			cvSmooth(imgThreshold,imgThreshold,CV_GAUSSIAN,9,9,2,2);
 			
@@ -130,6 +136,10 @@ public class CISTA {
 			int radius = Math.round(point.get(2));
 			cvCircle(target, center, 2, CvScalar.GREEN, -1, 8, 0);
 			cvCircle(target, center, radius, CvScalar.BLUE, 1, 8, 0);
+	}
+	
+	private void addPointToSendQueue(FloatPointer fp) {
+		float[] point = { fp.get(0), fp.get(1) };
 	}
 	
 	public static void main(String[] args) throws Exception, SocketException {
