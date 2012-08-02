@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		body{background:black;color:white;}
+		a{color:black}
+	</style>
+	<script type="text/javascript" src="engine.js"></script>
+
+	<script type="text/javascript">
+		var _engine = undefined;
+		window.onload = function(){
+		_engine = makeEngine(document.getElementById("example"));
+		_engine.add( makeLog() );
+		_engine.start();
+	};
+	</script>
+</head>
+<body style="height: 100%;padding:0;margin:0">
+<canvas id="example"></canvas>
+</body>
+</html>
