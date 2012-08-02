@@ -21,6 +21,7 @@ import static com.googlecode.javacv.cpp.opencv_core.cvGetSize;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.sql.Time;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -49,6 +50,11 @@ public class DotDetector {
 	//Colors given in order BGR-A, Blue, Green, Red, Alpha
 	private static CvScalar min = cvScalar(255, 255, 255, 0);
 	private static CvScalar max = cvScalar(255, 255, 255, 0);
+
+	//UDP prerequisites
+	DatagramSocket socket = new DatagramSocket();
+	ByteBuffer buffer = ByteBuffer.allocate(1024);
+	DatagramPacket packet;
 	
 	//Counter to be used for counting the number of frames per second
 	private AtomicInteger frames = new AtomicInteger(0);
@@ -65,11 +71,6 @@ public class DotDetector {
 	}
 
 	public DotDetector() throws Exception, SocketException {
-
-		//Set up UDP prerequisites
-		DatagramSocket socket = new DatagramSocket();
-		byte[] targetData = new byte[1024];
-		DatagramPacket packet;
 		
 		//Set up the FPS counter
 		Timer t = new Timer();
@@ -134,9 +135,10 @@ public class DotDetector {
 			frames.incrementAndGet();
 		}
 		
+		//Turn off the FPS counter
 		t.cancel();
 		
-		//Clean up
+		//Clean up and release the resources
 		detectframe.dispose();
 		realframe.dispose();
 		grabber.stop();
@@ -152,7 +154,17 @@ public class DotDetector {
 	}
 	
 	private void addPointToSendQueue(FloatPointer fp) {
-		float[] point = { fp.get(0), fp.get(1) };
+		Float x = fp.get(0);
+		Float y = fp.get(1);
+		
+		buffer.putFloat(x);
+		buffer.putChar(',');
+		buffer.putFloat(y);
+		
+		//TODO Fortsätt här. Kolla om det finns plats kvar i buffern för en till, annars sänd
+		//iväg den och töm bufferten. 
+		
+		
 	}
 	
 	public static void main(String[] args) throws Exception, SocketException {
