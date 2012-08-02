@@ -24,49 +24,50 @@ var http = require("http"),
     path = require("path"),
     fs = require("fs")
     port = process.argv[2] || 8888;
+var requesthandler = function( request, response ) {
+	// if request.url is request from javascript app, 
+	// parse current state to some sort of json and return it,
+	// else just return the static html files:
+	var pathname = url.parse( request.url ).pathname;
 
-http.createServer(function(request, response) {
+	if(pathname === "/api/current" )
+	{
+		var listofcoordpairs = current_state.trim().split( " " );
+		response.writeHead(200);
+		response.write( JSON.stringify( listofcoordpairs ) );
+		response.end();
+		return;
+	}
+	else
+	{
+		var uri = "../js" + pathname;
+		var filename = path.join(process.cwd(), uri);
+		path.exists(filename, function(exists) {
+			if(!exists) {
+				response.writeHead(404, {"Content-Type": "text/plain"});
+				response.write("404 Not Found\n");
+				response.end();
+				return;
+			}
 
-// if request.url is request from javascript app, 
-// parse current state to some sort of json and return it,
-// else just return the static html files:
-var pathname = url.parse( request.url ).pathname;
+			if (fs.statSync(filename).isDirectory()) 
+				filename += '/index.html';
 
-if(pathname === "/api/current" )
-{
-var listofcoordpairs = current_state.trim().split( " " );
-response.writeHead(200);
-response.write( JSON.stringify( listofcoordpairs ) );
-response.end();
-return;
-}
-else
-{
-  var uri = "../js" + pathname;
-  var filename = path.join(process.cwd(), uri);
-  path.exists(filename, function(exists) {
-    if(!exists) {
-      response.writeHead(404, {"Content-Type": "text/plain"});
-      response.write("404 Not Found\n");
-      response.end();
-      return;
-    }
+			fs.readFile(filename, "binary", function(err, file) {
+				if(err) {        
+					response.writeHead(500, {"Content-Type": "text/plain"});
+					response.write(err + "\n");
+					response.end();
+					return;
+				}
+				response.writeHead(200);
+				response.write(file, "binary");
+				response.end();
+			});
+		});
+	}
+};
 
-	if (fs.statSync(filename).isDirectory()) filename += '/index.html';
-
-    fs.readFile(filename, "binary", function(err, file) {
-      if(err) {        
-        response.writeHead(500, {"Content-Type": "text/plain"});
-        response.write(err + "\n");
-        response.end();
-        return;
-      }
-
-      response.writeHead(200);
-      response.write(file, "binary");
-      response.end();
-    });
-  });
-}).listen(parseInt(port, 10));
+http.createServer( requesthandler ).listen(parseInt(port, 10));
 
 console.log("Static file server running at\n  => http://localhost:" + port + "/\nCTRL + C to shutdown");

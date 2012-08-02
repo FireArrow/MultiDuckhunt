@@ -5,6 +5,7 @@
 		body{background:black;color:white;}
 		a{color:black}
 	</style>
+	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 	<script type="text/javascript" src="engine.js"></script>
 
 	<script type="text/javascript">
@@ -58,6 +59,18 @@
 		_engine.add( this_is_a_delegate_or_function_pointer_i_forget_what_it_is_called );
 
 		_engine.start();
+		
+		// short little webrequest demo
+		(function w_req(){
+		$.ajax({
+url: "api/current",
+dataType:"json",
+success: function(data){console.log(data);}
+} );
+		setTimeout( w_req, 50 );
+		})();
+		
+			
 	};
 	</script>
 	</script>
