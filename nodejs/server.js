@@ -1,7 +1,7 @@
 var udp_listen_port = 10001;
 
 // latest state of detected light (format: 0.5,22.388 33.21,9993 ...)
-var current_state = "1,54 3.55,33";
+var current_state = "0,0";
 
 // Listen for udp
 var dgram = require("dgram");
@@ -71,3 +71,9 @@ var requesthandler = function( request, response ) {
 http.createServer( requesthandler ).listen(parseInt(port, 10));
 
 console.log("Static file server running at\n  => http://localhost:" + port + "/\nCTRL + C to shutdown");
+
+process.stdin.resume();
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', function (chunk) {
+ current_state = chunk;
+});

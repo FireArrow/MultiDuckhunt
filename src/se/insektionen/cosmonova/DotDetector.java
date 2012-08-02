@@ -69,7 +69,14 @@ public class DotDetector {
 			frames.set(0);
 		}
 	}
-
+	
+	private FrameGrabber grabber;
+	private CanvasFrame realframe;
+	private CanvasFrame detectframe;
+	private CvMemStorage storage;
+	private IplImage grabbedImage;
+	private IplImage imgThreshold;
+	
 	public DotDetector() throws Exception, SocketException {
 		
 		//Set up the FPS counter
@@ -84,57 +91,64 @@ public class DotDetector {
 		// The available FrameGrabber classes include OpenCVFrameGrabber (opencv_highgui),
 		// DC1394FrameGrabber, FlyCaptureFrameGrabber, OpenKinectFrameGrabber,
 		// PS3EyeFrameGrabber, VideoInputFrameGrabber, and FFmpegFrameGrabber.
-		FrameGrabber grabber = new OpenCVFrameGrabber(0);
+		grabber = new OpenCVFrameGrabber(0);
 		grabber.setGamma(1);
 		grabber.start();
 		
-		CanvasFrame realframe = new CanvasFrame("Real image", 1);
-		CanvasFrame detectframe = new CanvasFrame("Fixed image", 1);
+		realframe = new CanvasFrame("Real image", 1);
+		detectframe = new CanvasFrame("Fixed image", 1);
 
 		// Objects allocated with a create*() or clone() factory method are automatically released
 		// by the garbage collector, but may still be explicitly released by calling release().
 		// You shall NOT call cvReleaseImage(), cvReleaseMemStorage(), etc. on objects allocated this way.
-		CvMemStorage storage = CvMemStorage.create();
+		storage = CvMemStorage.create();
 		
 		//Create initial images
-		IplImage grabbedImage = grabber.grab();
-		IplImage imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
+		grabbedImage = grabber.grab();
+		imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
 		
-		while (realframe.isVisible() && detectframe.isVisible() && (grabbedImage = grabber.grab()) != null) {
-			cvClearMemStorage(storage);
-			
-			//Create detection image
-			imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
-			cvInRangeS(grabbedImage, min, max, imgThreshold);
-
-			//Flip images to act as a mirror. TODO remove when camera faces screen
-			cvFlip(grabbedImage, grabbedImage, 1);
-			cvFlip(imgThreshold, imgThreshold, 1);
-			
-			//Find all dots in the image. This is where any calibration to dot detection is done, if needed, though it
-			//should be fine as it is right now.
-			CvSeq seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, 2, 20, 20, 5, 3, 10);
-			
-			for(int i=0; i<seq.total(); i++){
-				
-				FloatPointer point = new FloatPointer(cvGetSeqElem(seq, i));
-				
-				//Draw current circle to the original image
-				paintCircle(point, grabbedImage);
-				
-				//Buffer current circle to be sent to the server
-				addPointToSendQueue(point);
-			}
-			
-			//Show images 
-			//TODO Comment these out will probably improve performance quite a bit
-			detectframe.showImage(imgThreshold);
-			realframe.showImage(grabbedImage);
-			
-			//Add one to the frame rate counter
-			frames.incrementAndGet();
 		}
 		
+		public void Start() throws Exception
+		{
+			while (realframe.isVisible() && detectframe.isVisible() && (grabbedImage = grabber.grab()) != null) {
+				cvClearMemStorage(storage);
+				
+				//Create detection image
+				imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
+				cvInRangeS(grabbedImage, min, max, imgThreshold);
+
+				//Flip images to act as a mirror. TODO remove when camera faces screen
+				cvFlip(grabbedImage, grabbedImage, 1);
+				cvFlip(imgThreshold, imgThreshold, 1);
+				
+				//Find all dots in the image. This is where any calibration to dot detection is done, if needed, though it
+				//should be fine as it is right now.
+				CvSeq seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, 2, 20, 20, 5, 3, 10);
+				
+				for(int i=0; i<seq.total(); i++){
+					
+					FloatPointer point = new FloatPointer(cvGetSeqElem(seq, i));
+					
+					//Draw current circle to the original image
+					paintCircle(point, grabbedImage);
+					
+					//Buffer current circle to be sent to the server
+					addPointToSendQueue(point);
+				}
+				
+				//Show images 
+				//TODO Comment these out will probably improve performance quite a bit
+				detectframe.showImage(imgThreshold);
+				realframe.showImage(grabbedImage);
+				
+				//Add one to the frame rate counter
+				frames.incrementAndGet();
+			}
+		}
+		
+	public void Close()throws Exception
+	{
 		//Turn off the FPS counter
 		t.cancel();
 		
@@ -168,6 +182,8 @@ public class DotDetector {
 	}
 	
 	public static void main(String[] args) throws Exception, SocketException {
-		new DotDetector();
+		DotDetector dd = new DotDetector();
+		dd.Start();
+		dd.Close();
 	}
 }
