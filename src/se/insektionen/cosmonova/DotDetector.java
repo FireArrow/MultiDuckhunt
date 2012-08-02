@@ -6,6 +6,7 @@
 //som i sin tur är beroende av OpenCV. Läs mer om, och hitta länkar till det, på http://code.google.com/p/javacv/wiki/Windows7AndOpenCV
 //
 
+//TODO Figure out which of these are actually needed for operation. The include list is copied from an example
 import static com.googlecode.javacv.cpp.opencv_core.CV_AA;
 import static com.googlecode.javacv.cpp.opencv_core.cvCircle;
 import static com.googlecode.javacv.cpp.opencv_core.cvClearMemStorage;
@@ -17,6 +18,7 @@ import static com.googlecode.javacv.cpp.opencv_core.cvPoint;
 import static com.googlecode.javacv.cpp.opencv_core.cvRectangle;
 import static com.googlecode.javacv.cpp.opencv_core.cvGetSize;
 
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.sql.Time;
@@ -42,14 +44,17 @@ import static com.googlecode.javacv.cpp.opencv_imgproc.*;
 import static com.googlecode.javacv.cpp.opencv_calib3d.*;
 import static com.googlecode.javacv.cpp.opencv_objdetect.*;
 
-//Förkortning för Cosmonova Invaders - Shoot Them All
-public class CISTA {
+public class DotDetector {
 	
 	//Colors given in order BGR-A, Blue, Green, Red, Alpha
 	private static CvScalar min = cvScalar(255, 255, 255, 0);
 	private static CvScalar max = cvScalar(255, 255, 255, 0);
 	
+	//Counter to be used for counting the number of frames per second
 	private AtomicInteger frames = new AtomicInteger(0);
+
+	//FPS counter class. Prints and resets the above defined counter.
+	//Should preferably be set to execute once every second
 	private class FPSCounter extends TimerTask {
 
 		@Override
@@ -59,10 +64,14 @@ public class CISTA {
 		}
 	}
 
-	public CISTA() throws Exception, SocketException {
-		
+	public DotDetector() throws Exception, SocketException {
+
+		//Set up UDP prerequisites
 		DatagramSocket socket = new DatagramSocket();
+		byte[] targetData = new byte[1024];
+		DatagramPacket packet;
 		
+		//Set up the FPS counter
 		Timer t = new Timer();
 		t.schedule(new FPSCounter(), 1000, 1000);
 		
@@ -101,23 +110,27 @@ public class CISTA {
 			cvFlip(grabbedImage, grabbedImage, 1);
 			cvFlip(imgThreshold, imgThreshold, 1);
 			
+			//Find all dots in the image. This is where any calibration to dot detection is done, if needed, though it
+			//should be fine as it is right now.
 			CvSeq seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, 2, 20, 20, 5, 3, 10);
 			
 			for(int i=0; i<seq.total(); i++){
 				
 				FloatPointer point = new FloatPointer(cvGetSeqElem(seq, i));
 				
-				//Rita cirkeln på bilden
+				//Draw current circle to the original image
 				paintCircle(point, grabbedImage);
 				
-				//Skicka koordinaten till server
+				//Buffer current circle to be sent to the server
 				addPointToSendQueue(point);
 			}
-//			cvSmooth(imgThreshold,imgThreshold,CV_GAUSSIAN,9,9,2,2);
 			
-			//Show images
+			//Show images 
+			//TODO Comment these out will probably improve performance quite a bit
 			detectframe.showImage(imgThreshold);
 			realframe.showImage(grabbedImage);
+			
+			//Add one to the frame rate counter
 			frames.incrementAndGet();
 		}
 		
@@ -143,6 +156,6 @@ public class CISTA {
 	}
 	
 	public static void main(String[] args) throws Exception, SocketException {
-		new CISTA();
+		new DotDetector();
 	}
 }
