@@ -1,7 +1,7 @@
 var udp_listen_port = 10001;
 
 // latest state of detected light (format: 0.5,22.388 33.21,9993 ...)
-var current_state = "";
+var current_state = "1,54 3.55,33";
 
 // Listen for udp
 var dgram = require("dgram");
@@ -28,12 +28,22 @@ var http = require("http"),
 http.createServer(function(request, response) {
 
 // if request.url is request from javascript app, 
-// parse current state to some sort of json and return it, (This has yet to be implemented)
+// parse current state to some sort of json and return it,
 // else just return the static html files:
+var pathname = url.parse( request.url ).pathname;
 
-  var uri = url.parse(request.url).pathname
-    , filename = path.join(process.cwd(), uri);
-  
+if(pathname === "/api/current" )
+{
+var listofcoordpairs = current_state.trim().split( " " );
+response.writeHead(200);
+response.write( JSON.stringify( listofcoordpairs ) );
+response.end();
+return;
+}
+else
+{
+  var uri = "../js" + pathname;
+  var filename = path.join(process.cwd(), uri);
   path.exists(filename, function(exists) {
     if(!exists) {
       response.writeHead(404, {"Content-Type": "text/plain"});
