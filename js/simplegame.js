@@ -1,14 +1,30 @@
+var _debug = true;
 var makeGame = function() {
 	var server = makeServerState();
 	var engine = makeEngine(document.getElementById("example"));
 	var view = makeView();
 	engine.start();
 	var calibrator = undefined;
+	var maxTime = 50*1000;
+	var score = 0;
+
+	var finished = function() {
+		engine.clear();
+		engine.add( ending( score ) );
+	};
 
 	var start = function() {
 		var drawables = [enemy()];
 		var viewport = makeView();
-
+		var startTime = new Date().getTime();
+		engine.add( bar( "Ammo", {x:50,y:30},{x:30,y:200},"green",function(){ return server.getAmmo()/server.getMaxAmmo();}) );
+		engine.add( bar( "Time", {x:90,y:30},{x:30,y:200},"blue",function(){
+			var timeTaken = new Date().getTime() - startTime ;
+			var timeRemaining = maxTime - timeTaken;
+			if( timeRemaining < 0 )
+				finished();
+			return timeRemaining / maxTime;
+		}));
 		var lastmark = 0;
 
 		var sortFunction = function(a,b){
@@ -30,6 +46,7 @@ var makeGame = function() {
 
 	var reset = function() {
 		engine.clear();
+		server.reload();
 		start();
 	};
 
