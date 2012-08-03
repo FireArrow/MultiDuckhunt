@@ -109,6 +109,9 @@ function makeEngine( canvas )
 		start: function(){
 			startTime = new Date().getTime();
 			animate();
+		},
+		clear: function(){
+			workers = [];
 		}
 	};
 }

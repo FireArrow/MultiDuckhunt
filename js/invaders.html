@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		body{background:black;color:white;}
+		a{color:black}
+	</style>
+	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
+	<script type="text/javascript" src="vec.js"></script>
+	<script type="text/javascript" src="engine.js"></script>
+	<script type="text/javascript" src="calibrator.js"></script>
+	<script type="text/javascript" src="state.js"></script>
+	<script type="text/javascript" src="view.js"></script>
+	<script type="text/javascript" src="simplegame.js"></script>
+	<script type="text/javascript" src="drawables.js"></script>
+
+	<script type="text/javascript">
+	/* load images */
+	var _X = new Image();
+	_X.src = "X.png";
+	var _wSprite = new Image();
+	_wSprite.src = "si_white_full.png";
+	var _rSprite = new Image();
+	_rSprite.src = "si_red_full.png";
+	</script>
+
+	<script type="text/javascript">
+		window.onload = function(){
+			var game = makeGame();
+			game.recalibrate();
+		};
+	</script>
+</head>
+<body style="height: 100%;padding:0;margin:0">
+<canvas id="example"></canvas>
+</body>
+</html>
