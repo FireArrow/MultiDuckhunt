@@ -6,23 +6,28 @@
 		a{color:black}
 	</style>
 	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
+	<script type="text/javascript" src="vec.js"></script>
 	<script type="text/javascript" src="engine.js"></script>
 	<script type="text/javascript" src="calibrator.js"></script>
 	<script type="text/javascript" src="state.js"></script>
+	<script type="text/javascript" src="view.js"></script>
+	<script type="text/javascript" src="simplegame.js"></script>
+	<script type="text/javascript" src="drawables.js"></script>
 
 	<script type="text/javascript">
-		var _engine = undefined;
+	/* load images */
+	var _X = new Image();
+	_X.src = "X.png";
+	var _wSprite = new Image();
+	_wSprite.src = "si_white_full.png";
+	var _rSprite = new Image();
+	_rSprite.src = "si_red_full.png";
+	</script>
+
+	<script type="text/javascript">
 		window.onload = function(){
-			var _server = makeServerState();
-			_engine = makeEngine(document.getElementById("example"));
-			var X = new Image();
-			X.src = "X.png";
-			var c = calibrateAction( _server.getState, X, function( id, calibrator ) {
-				_engine.remove( id );
-				_engine.add( demo( calibrator ) );
-			});
-			_engine.add( c );
-			_engine.start();
+			var game = makeGame();
+			game.recalibrate();
 		};
 	</script>
 </head>
