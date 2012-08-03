@@ -1,3 +1,36 @@
+var calibrateAction = function( state, image, finished )
+{
+	var id = "calibrate";
+	var c = makeCalibration( state );
+	var transition_mark = undefined;
+	var delegate = function( context, width, height, mark, keys ) {
+		if( c.getState() === "show1" )
+		{
+			context.drawImage(image, -20, -20,40,40);
+			if( keys.length > 0 )
+			{
+				c.reportFirst( width, height );
+				transition_mark = mark;
+			}
+		}
+		else if( c.getState() === "show2" )
+		{
+			context.drawImage(image, width-20, height-20,40,40);
+			if( keys.length > 0 && transition_mark + 1000 < mark )
+			{
+				c.reportSecond();
+			}
+		}
+		else if( c.getState() === "ready" )
+		{
+			finished( id, c );
+		}
+	};
+	return {
+		id: id,
+		draw: delegate
+	};
+};
 
 var makeCalibration = function( comms )
 {
@@ -31,6 +64,15 @@ var makeCalibration = function( comms )
 		var y = ( baseY / deltaY ) * _current_coords.y;
 
 			return { x: x, y: y };
+		},
+		getAll: function(){
+			var serverCoords = comms();
+			var transformed = [];
+			for( var i = 0; i < serverCoords.length; i++ )
+			{
+				transformed.push( this.transform( serverCoords[i] ) );
+			}
+			return transformed;
 		}
 	};
 };
