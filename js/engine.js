@@ -3,7 +3,9 @@ function makeLog()
 	var counter = 0;
 	var timestamp = new Date().getTime();
 	var fps = 0;
-	return function(context, width, height, mark, pressedkeys) {
+	return {
+		id: "log",
+		draw: function(context, width, height, mark, pressedkeys) {
 			counter++;
 
 			var took = new Date().getTime() - timestamp;
@@ -15,10 +17,10 @@ function makeLog()
 				counter =0;
 				timestamp=new Date().getTime();
 			}
-			
-		context.fillStyle = "white";
-		context.font = "12px";
-		context.fillText( "FPS: " + Math.round(fps), 100, 40 );
+			context.fillStyle = "white";
+			context.font = "12px";
+			context.fillText( "FPS: " + Math.round(fps), 100, 40 );
+		}
 	};
 }
 
@@ -30,7 +32,11 @@ function makeEngine( canvas )
 	{
 		for (var worker in workers)
 		{
-			workers[worker](context, width, height, mark, pressedkeys);
+			if( workers[worker] !== undefined )
+			{
+				context.setTransform( 1, 0, 0, 1, 0, 0 );
+				workers[worker].draw(context, width, height, mark, pressedkeys);
+			}
 		}
 	};
 
@@ -83,9 +89,22 @@ function makeEngine( canvas )
 	var startTime = undefined;
 
 	return {
-		add: function( fn )
-		{
+		add: function( fn ){
 			workers.push(fn);
+		},
+		remove: function( id ){
+			var toRemove = [];
+			for (var worker in workers)
+			{
+				if( workers[worker] !== undefined && workers[worker].id === id )
+				{
+					toRemove.push(worker);
+				}
+			}
+			for( var index in toRemove )
+			{
+				delete workers[toRemove[index]];
+			}
 		},
 		start: function(){
 			startTime = new Date().getTime();

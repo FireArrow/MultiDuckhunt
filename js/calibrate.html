@@ -15,43 +15,13 @@
 		window.onload = function(){
 			var _server = makeServerState();
 			_engine = makeEngine(document.getElementById("example"));
-			var c = makeCalibration(_server.getState);
 			var X = new Image();
 			X.src = "X.png";
-			var transition_mark = undefined;
-			var delegate = function( context, width, height, mark, keys ) {
-				if( c.getState() === "show1" )
-				{
-					context.drawImage(X, -20, -20,40,40);
-					if( keys.length > 0 )
-					{
-						c.reportFirst( width, height );
-						transition_mark = mark;
-					}
-				}
-				else if( c.getState() === "show2" )
-				{
-					context.drawImage(X, width-20, height-20,40,40);
-					if( keys.length > 0 && transition_mark + 1000 < mark )
-					{
-						c.reportSecond();
-					}
-				}
-				else if( c.getState() === "ready" )
-				{
-					var cState = _server.getState();
-					for( var i = 0; i<cState.length; i++ )
-					{
-						var foreigncoords = cState[i];
-						var tCord = c.transform( foreigncoords );
-						context.fillStyle = "#99F";
-						context.beginPath();
-						context.arc( tCord.x, tCord.y, 10, 0, Math.PI*2, true);
-						context.fill();
-					}
-				}
-			};
-			_engine.add( delegate );
+			var c = calibrateAction( _server.getState, X, function( id, calibrator ) {
+				_engine.remove( id );
+				_engine.add( demo( calibrator ) );
+			});
+			_engine.add( c );
 			_engine.start();
 		};
 	</script>

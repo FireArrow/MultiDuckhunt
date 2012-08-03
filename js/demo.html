@@ -55,8 +55,14 @@
 			lastmark = mark;
 		};
 		
+		// _engine expect an object with an id property and a draw property.
+		var trololo = {
+			id: "troll",
+			draw: this_is_a_delegate_or_function_pointer_i_forget_what_it_is_called
+		};
+			
 		// then add it to the engine
-		_engine.add( this_is_a_delegate_or_function_pointer_i_forget_what_it_is_called );
+		_engine.add( trololo );
 
 		_engine.start();
 		
