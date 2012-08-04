@@ -26,7 +26,7 @@ var ending = function( score ) {
 		}
 	};
 };
-var enemy = function( killed ){
+var enemy = function( killed, intersectHit ){
 	var enemyid = 0;
 	var imgoffsets = [0,120,250];
 	var imgwidths = [110,120,80];
@@ -48,22 +48,21 @@ var enemy = function( killed ){
 						z:(-1)*(4+Math.random())});
 		};
 	reset();
+	var wasHit = function(mark){
+		killed();
+		islive = mark;
+		velocity = vec({
+			x: velocity.x()*10,
+			y: velocity.y()*10,
+			z: velocity.z()/10
+		});
+	};
 
 	return {
 		id:"enemy",
 		pos: function(){ return position;},
 		size: function(){ return _size; },
 		tick: function( keys, mark, delta ) {
-			if(keys.length > 0 && islive === -1 )
-			{
-				islive = mark;
-				velocity = vec({
-					x: velocity.x()*10,
-					y: velocity.y()*10,
-					z: velocity.z()/10
-				});
-
-			}
 			if( islive !== -1 && mark-islive > 2000 || position.z() < -10000 )
 			{
 				reset();
@@ -72,7 +71,7 @@ var enemy = function( killed ){
 			state = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
 			position = position.add( velocity.mul( delta ) );
 		},
-		draw: function( context, x, y, s ) {
+		draw: function( context, x, y, s, mark ) {
 			if( _debug !== undefined )
 			{
 				context.fillStyle = "rgba(0,255,0,100)";
@@ -83,12 +82,13 @@ var enemy = function( killed ){
 
 			if( islive == -1 )
 			{
+				if( intersectHit( x, y, s ) )
+					wasHit( mark );
 				context.setTransform(1, 0, 0, 1, -s/2, -s/2);
 				context.drawImage(_wSprite, imgoffsets[enemyid], state[0], imgwidths[enemyid],state[1], x,y,s,s);
 			}
 			else
 			{
-
 				angle+=0.1;
 				var sin = Math.sin(angle);
 				var cos = Math.cos(angle);
