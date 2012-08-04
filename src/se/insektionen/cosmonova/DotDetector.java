@@ -107,6 +107,7 @@ public class DotDetector {
 		// PS3EyeFrameGrabber, VideoInputFrameGrabber, and FFmpegFrameGrabber.
 		grabber = new OpenCVFrameGrabber(0);
 		grabber.setGamma(1);
+		grabber.setFrameRate(15); //Seems to be hard limited between ~15 and ~25 on my webcam
 
 
 		realframe = new CanvasFrame("Real image", 1);
