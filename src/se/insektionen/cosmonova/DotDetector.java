@@ -199,10 +199,9 @@ public class DotDetector {
 	}
 	
 	private void initNetwork() throws SocketException {
-		if(socket != null) {
-			socket.close();
+		if(socket == null) {
+			socket = new DatagramSocket();
 		}
-		socket = new DatagramSocket();
 	}
 	
 	public static void main(String[] args) throws SocketException{
