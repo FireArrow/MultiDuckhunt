@@ -22,7 +22,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.sql.Time;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,9 +51,12 @@ public class DotDetector {
 	private static CvScalar max = cvScalar(255, 255, 255, 0);
 
 	//UDP prerequisites
-	DatagramSocket socket = new DatagramSocket();
+	DatagramSocket socket;
 	ByteBuffer buffer = ByteBuffer.allocate(1024);
 	DatagramPacket packet;
+	
+	//Timer for the FPS counter
+	Timer t;
 	
 	//Counter to be used for counting the number of frames per second
 	private AtomicInteger frames = new AtomicInteger(0);
@@ -77,15 +79,13 @@ public class DotDetector {
 	private IplImage grabbedImage;
 	private IplImage imgThreshold;
 	
-	public DotDetector() throws Exception, SocketException {
+	public DotDetector() {
 		
 		//Set up the FPS counter
-		Timer t = new Timer();
-		t.schedule(new FPSCounter(), 1000, 1000);
+		t = new Timer();
 		
 		// Preload the opencv_objdetect module to work around a known bug.
 		Loader.load(opencv_objdetect.class);
-		
 		
 
 		// The available FrameGrabber classes include OpenCVFrameGrabber (opencv_highgui),
@@ -93,7 +93,7 @@ public class DotDetector {
 		// PS3EyeFrameGrabber, VideoInputFrameGrabber, and FFmpegFrameGrabber.
 		grabber = new OpenCVFrameGrabber(0);
 		grabber.setGamma(1);
-		grabber.start();
+		
 		
 		realframe = new CanvasFrame("Real image", 1);
 		detectframe = new CanvasFrame("Fixed image", 1);
@@ -103,14 +103,23 @@ public class DotDetector {
 		// You shall NOT call cvReleaseImage(), cvReleaseMemStorage(), etc. on objects allocated this way.
 		storage = CvMemStorage.create();
 		
-		//Create initial images
-		grabbedImage = grabber.grab();
-		imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
 		
 		}
 		
-		public void Start() throws Exception
-		{
+		public void start() throws Exception, SocketException {
+			
+			initNetwork();
+			
+			//Schedule the FPS counter
+			t.schedule(new FPSCounter(), 1000, 1000);
+			
+			//Create initial images
+			grabbedImage = grabber.grab();
+			imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
+			
+			//Start the grabber
+			grabber.start();
+			
 			while (realframe.isVisible() && detectframe.isVisible() && (grabbedImage = grabber.grab()) != null) {
 				cvClearMemStorage(storage);
 				
@@ -118,7 +127,8 @@ public class DotDetector {
 				imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
 				cvInRangeS(grabbedImage, min, max, imgThreshold);
 
-				//Flip images to act as a mirror. TODO remove when camera faces screen
+				//Flip images to act as a mirror. 
+				//TODO remove when camera faces screen
 				cvFlip(grabbedImage, grabbedImage, 1);
 				cvFlip(imgThreshold, imgThreshold, 1);
 				
@@ -145,17 +155,23 @@ public class DotDetector {
 				//Add one to the frame rate counter
 				frames.incrementAndGet();
 			}
+			
+			
 		}
 		
-	public void Close()throws Exception
-	{
+	public void close() {
 		//Turn off the FPS counter
 		t.cancel();
 		
 		//Clean up and release the resources
 		detectframe.dispose();
 		realframe.dispose();
-		grabber.stop();
+		try {
+			//Try to stop the grabber
+			grabber.stop();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private void paintCircle(FloatPointer point, IplImage target) {
@@ -175,15 +191,29 @@ public class DotDetector {
 		buffer.putChar(',');
 		buffer.putFloat(y);
 		
+		
 		//TODO Fortsätt här. Kolla om det finns plats kvar i buffern för en till, annars sänd
 		//iväg den och töm bufferten. 
 		
 		
 	}
 	
-	public static void main(String[] args) throws Exception, SocketException {
+	private void initNetwork() throws SocketException {
+		if(socket != null) {
+			socket.close();
+		}
+		socket = new DatagramSocket();
+	}
+	
+	public static void main(String[] args) throws SocketException{
 		DotDetector dd = new DotDetector();
-		dd.Start();
-		dd.Close();
+		try {
+			dd.start();
+		} catch(Exception e) {
+			e.printStackTrace();
+		} finally {
+			dd.close();
+		}
+		
 	}
 }
