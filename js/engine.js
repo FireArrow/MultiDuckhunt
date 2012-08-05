@@ -69,22 +69,24 @@ function makeEngine( canvas )
 		}
 		else
 		{
-			// request new frame
-			requestAnimFrame(function(){
-				animate();
-			});
+			requestAnimFrame(animate);
 		}
 	};
 
-	var animate = function()
+	var animate = function animate()
 	{
+		var enterPauseMode = isPaused;
 		var context = canvas.getContext("2d");
 		var frameTimeStamp = new Date().getTime() - startTime;
 		context.clearRect(0, 0, canvas.width, canvas.height);
 		context.canvas.width  = window.innerWidth-10;
 		context.canvas.height = window.innerHeight-50;
 		triggerWork(context, canvas.width, canvas.height, frameTimeStamp );
-		pauseLoop();
+		if( enterPauseMode )
+			pauseLoop();
+		else
+			requestAnimFrame( animate );
+
 	};
 
 	window.requestAnimFrame = (function(){

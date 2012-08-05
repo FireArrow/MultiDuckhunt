@@ -42,13 +42,21 @@ var makeCalibration = function( comms )
 	
 	return {
 		reportFirst: function(current_width,current_height){
-			_current_coords = {x:current_width,y:current_height};
-			_state = "show2";
-			base_report = comms()[0];
+			var coords = comms();
+			if( coords.length > 0 )
+			{
+				_current_coords = {x:current_width,y:current_height};
+				_state = "show2";
+				base_report = coords[0];
+			}
 		},
 		reportSecond: function(){
-			_state = "ready";
-			scale_report = comms()[0];
+			var coords = comms();
+			if( coords.length > 0 )
+			{
+				_state = "ready";
+				scale_report = coords[0];
+			}
 		},
 		getState: function(){
 			return _state;
