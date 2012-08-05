@@ -1,8 +1,7 @@
-var _debug = true;
+var _debug = undefined;
 var makeGame = function() {
 	var server = makeServerState();
 	var engine = makeEngine(document.getElementById("example"));
-	var view = makeView();
 	engine.start();
 	var calibrator = undefined;
 	var maxTime = 50*1000;
@@ -56,7 +55,7 @@ var makeGame = function() {
 
 		var hitCheck = function( x, y, s )
 		{
-			var hitcoords = _debug ? mousehit : server.getAll();
+			var hitcoords = _debug ? mousehit : calibrator.getAll();
 			for( var i in hitcoords )
 			{
 				var dx = hitcoords[i].x - x;
@@ -97,8 +96,7 @@ var makeGame = function() {
 				calibrator = c;
 				reset();
 			});
-		//	engine.add( c );
-			reset();
+			engine.add( c );
 		},
 		reset: reset
 	}
