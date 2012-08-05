@@ -16,6 +16,7 @@ var makeGame = function() {
 			var x = e.pageX - this.offsetLeft;
 			var y = e.pageY - this.offsetTop;
 			mousehit = [{x:x,y:y}];
+			engine.resume();
 		});
 		$("#example").mouseup(function(){
 			mousehit=[];
@@ -26,6 +27,7 @@ var makeGame = function() {
 	var finished = function() {
 		engine.clear();
 		engine.add( ending( score ) );
+		engine.pause();
 	};
 
 	var start = function() {
@@ -74,7 +76,11 @@ var makeGame = function() {
 				viewport.draw( context, width,height, drawables[d2], mark );
 			lastmark = mark;
 		};
-		drawables.push( enemy( function(){score++;}, hitCheck ) );
+		for( var i = 0; i < 10; i++ )
+		{
+			drawables.push( enemy( function(){score++;}, hitCheck ) );
+		}
+
 		engine.add( {draw:enemies,id:"aoeu"} );
 	};
 

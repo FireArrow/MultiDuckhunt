@@ -28,6 +28,7 @@ function makeEngine( canvas )
 {
 	var workers = [];
 	var pressedkeys = [];
+	var isPaused = false;
 	var triggerWork = function(context, width, height, mark )
 	{
 		for (var worker in workers)
@@ -60,6 +61,21 @@ function makeEngine( canvas )
 		pressedkeys.push( keyCode );
 	};
 
+	var pauseLoop = function pl()
+	{
+		if( isPaused )
+		{
+			window.setTimeout(pl, 100);
+		}
+		else
+		{
+			// request new frame
+			requestAnimFrame(function(){
+				animate();
+			});
+		}
+	};
+
 	var animate = function()
 	{
 		var context = canvas.getContext("2d");
@@ -68,11 +84,7 @@ function makeEngine( canvas )
 		context.canvas.width  = window.innerWidth-10;
 		context.canvas.height = window.innerHeight-50;
 		triggerWork(context, canvas.width, canvas.height, frameTimeStamp );
-
-		// request new frame
-		requestAnimFrame(function(){
-			animate();
-		});
+		pauseLoop();
 	};
 
 	window.requestAnimFrame = (function(){
@@ -112,6 +124,12 @@ function makeEngine( canvas )
 		},
 		clear: function(){
 			workers = [];
+		},
+		pause: function(){
+			isPaused = true;
+		},
+		resume: function() {
+			isPaused = false;
 		}
 	};
 }
