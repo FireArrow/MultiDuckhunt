@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -59,7 +60,7 @@ public class DotDetector {
 
 	//UDP prerequisites
 	private DatagramSocket socket;
-	private ByteBuffer buffer = ByteBuffer.allocate(QUEUE_LENGTH*12); //One coordinate is 12 bytes, thus the times twelve
+	private String buffer = "";//ByteBuffer.allocate(QUEUE_LENGTH*12); //One coordinate is 12 bytes, thus the times twelve
 	private DatagramPacket packet;
 	
 	private InetAddress serverAddress;
@@ -207,16 +208,12 @@ public class DotDetector {
 		float y = fp.get(1);
 
 		//One coordinate takes up 10 byte
-		buffer.putFloat(x);
-		buffer.putChar(',');
-		buffer.putFloat(y);
-		buffer.putChar(' '); //This was agreed upon during meeting, but could probably be removed for slight optimization
+		buffer+=x;
+		buffer+=",";
+		buffer+=y;
+		buffer+=" ";
 		
-		coordsInQueue++;
 		
-		if(coordsInQueue == QUEUE_LENGTH) {
-			sendQueue();
-		}
 
 
 	}
@@ -224,12 +221,15 @@ public class DotDetector {
 	private void sendQueue() throws IOException {
 		
 		//Don't bother sending an empty queue
-		if(coordsInQueue == 0) return;
-		byte[] data = buffer.array();
+		//if(coordsInQueue == 0) return;
+		if(buffer.isEmpty()){
+			buffer=" ";
+		}
+		byte[] data = buffer.getBytes();
 		packet = new DatagramPacket(data, data.length, serverAddress, serverPort);
 		socket.send(packet);
 		
-		buffer.clear();
+		buffer = "";
 		coordsInQueue = 0;
 	}
 
