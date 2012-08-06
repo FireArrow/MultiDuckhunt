@@ -5,13 +5,13 @@ var bar = function(name, position, size, color, getPercent ){
 	return {
 		id: name,
 		draw: function( context, width, height, mark, keys ) {
-			context.fillStyle = "white";
+			context.fillStyle = "#555";
 			context.fillRect( position.x, position.y, size.x, size.y );
 			context.fillStyle = color;
 			var colorheight = (size.y - 10) * getPercent();
 			if(colorheight < 0 ) colorheight = 0;
 			context.fillRect( 5+position.x, position.y+(size.y-colorheight)-5, size.x - 10, colorheight  );
-			context.fillStyle = "white";
+			context.fillStyle = "red";
 			context.font = "12px";
 			context.fillText( name, position.x, position.y + size.y + 10 );
 		}

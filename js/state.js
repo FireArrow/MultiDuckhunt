@@ -15,7 +15,7 @@ var makeServerState = function()
 					{
 						var lst = data[i].split(",");
 						points_arr.push( {x:parseFloat(lst[0]),y:parseFloat(lst[1]) } );
-						_remaining_ammo-=4;
+						//_remaining_ammo-=4;
 					}
 					_current_server_state = points_arr;
 				}
@@ -23,7 +23,7 @@ var makeServerState = function()
 				{
 					_current_server_state = [];
 				}
-				setTimeout( w_req, 50 ); // do the above with 50 ms interval
+				setTimeout( w_req, 10 ); // do the above with 50 ms interval
 			},
 			error: function(a,b,c)
 			{
