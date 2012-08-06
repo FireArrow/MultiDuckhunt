@@ -12,7 +12,7 @@ namespace CoordSender
 		public MainWindow()
 		{
 			InitializeComponent();
-			_s = new Sender();
+			_s = new Sender { Info = GetCurrentInfoString() };
 			DataContext = _s;
 		}
 
@@ -48,6 +48,15 @@ namespace CoordSender
 			if( _keep )
 				_s.DataSource = " ";
 			_keep = !_keep;
+			_s.Info = GetCurrentInfoString();
+		}
+
+		string GetCurrentInfoString()
+		{
+			return string.Format( "This app sends system mouse coords via udp to {0}:{1} every {2} ms.\nPress any key to switch state.\n\n", Properties.Settings.Default.TargetServer, Properties.Settings.Default.TargetPort, Properties.Settings.Default.SendingInterval ) + ( _keep ?
+				"Currently in HOLD state.\n\nAny clicks in window area will be continuously sent until this state is exited."
+				:
+				"Currently in SINGLE CLICK state.\n\nClicking the window will send coordinates while mouse button is pressed." );
 		}
 
 		private void Window_KeyUp( object sender, KeyEventArgs e )

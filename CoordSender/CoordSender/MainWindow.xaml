@@ -2,14 +2,18 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MainWindow" Height="350" Width="525" Keyboard.KeyDown="Window_KeyDown" 
-        Keyboard.KeyUp="Window_KeyUp">
-    <Grid  Mouse.MouseDown="Window_MouseDown"
-        Mouse.MouseUp="Window_MouseUp" 
-       >
-        <TextBlock   >
+        Keyboard.KeyUp="Window_KeyUp" Mouse.MouseDown="Window_MouseDown"
+        Mouse.MouseUp="Window_MouseUp" >
+        <StackPanel>
+            <TextBlock   >
+            <TextBlock.Text>
+              <Binding Path="Info"/>
+            </TextBlock.Text>
+            </TextBlock>
+            <TextBlock   >
             <TextBlock.Text>
               <Binding Path="DataSource"/>
             </TextBlock.Text>
-        </TextBlock>
-    </Grid>
+            </TextBlock>
+        </StackPanel>
 </Window>

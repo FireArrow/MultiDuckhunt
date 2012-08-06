@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Configuration;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -19,10 +15,10 @@ namespace CoordSender
 		public Sender()
 		{
 			_socket = new Socket( AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp );
-			_serverAddr = IPAddress.Parse( ConfigurationManager.AppSettings["TargetServer"] ?? "127.0.0.1" );
-			_endPoint = new IPEndPoint( _serverAddr, Int32.Parse( ConfigurationManager.AppSettings["TargetPort"] ?? "10001" ) );
+			_serverAddr = IPAddress.Parse( Properties.Settings.Default.TargetServer ?? "127.0.0.1" );
+			_endPoint = new IPEndPoint( _serverAddr, Properties.Settings.Default.TargetPort );
 			_data = "";
-			var t = new Timer( Double.Parse( ConfigurationManager.AppSettings["SendingInterval"] ?? "100" ) );
+			var t = new Timer( Properties.Settings.Default.SendingInterval );
 			t.Elapsed += Send;
 			t.Enabled = true;
 		}
@@ -35,7 +31,7 @@ namespace CoordSender
 		}
 
 		string _data;
-
+		string _info;
 		public string DataSource
 		{
 			get { return _data; }
@@ -43,6 +39,15 @@ namespace CoordSender
 			{
 				_data = value;
 				OnPropertyChanged( new PropertyChangedEventArgs( "DataSource" ) );
+			}
+		}
+		public string Info
+		{
+			get { return _info; }
+			set
+			{
+				_info = value;
+				OnPropertyChanged( new PropertyChangedEventArgs( "Info" ) );
 			}
 		}
 
