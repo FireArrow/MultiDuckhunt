@@ -8,6 +8,15 @@ var makeGame = function() {
 	var score = 0;
 	var mousehit = [];
 	var debugAmmo = 1;
+	var finished = false;
+	$("#example").mousedown(function(e){
+		if( finished )
+		{
+			finished=false;
+			engine.resume();
+			reset();
+		}
+	});
 	if( _debug )
 	{
 		$("#example").mousedown(function(e){
@@ -27,6 +36,7 @@ var makeGame = function() {
 		engine.clear();
 		engine.add( ending( score ) );
 		engine.pause();
+		finished=true;
 	};
 
 	var start = function() {
