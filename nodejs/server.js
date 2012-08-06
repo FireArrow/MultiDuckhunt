@@ -14,7 +14,7 @@ server.on( "listening",
 server.on("message",
 	function (msg, rinfo) {
 		console.log("server got: " + msg + " from " + rinfo.address + ":" + rinfo.port);
-		current_state = msg;
+		current_state = ""+msg;
 });
 server.bind(udp_listen_port);
 
@@ -32,7 +32,7 @@ var requesthandler = function( request, response ) {
 
 	if(pathname === "/api/current" )
 	{
-		var listofcoordpairs = current_state.trim().split( " " );
+		var listofcoordpairs = current_state.split( " " );
 		response.writeHead(200);
 		response.write( JSON.stringify( listofcoordpairs ) );
 		response.end();
