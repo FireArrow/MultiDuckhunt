@@ -32,7 +32,7 @@ var makeGame = function() {
 	}
 
 
-	var finished = function() {
+	var finishedCallback = function() {
 		engine.clear();
 		engine.add( ending( score ) );
 		engine.pause();
@@ -52,7 +52,7 @@ var makeGame = function() {
 			var timeTaken = new Date().getTime() - startTime ;
 			var timeRemaining = maxTime - timeTaken;
 			if( timeRemaining < 0 )
-				finished();
+				finishedCallback();
 			return timeRemaining / maxTime;
 		}));
 		var lastmark = 0;
