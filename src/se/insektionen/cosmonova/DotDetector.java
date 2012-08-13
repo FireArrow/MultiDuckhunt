@@ -7,15 +7,13 @@
 //
 
 //TODO Figure out which of these are actually needed for operation. The include list is copied from an example
-import static com.googlecode.javacv.cpp.opencv_core.CV_AA;
+//import static com.googlecode.javacv.cpp.opencv_core.CV_AA;
 import static com.googlecode.javacv.cpp.opencv_core.cvCircle;
 import static com.googlecode.javacv.cpp.opencv_core.cvClearMemStorage;
-import static com.googlecode.javacv.cpp.opencv_core.cvDrawContours;
-import static com.googlecode.javacv.cpp.opencv_core.cvFillConvexPoly;
+//import static com.googlecode.javacv.cpp.opencv_core.cvDrawContours;
+//import static com.googlecode.javacv.cpp.opencv_core.cvFillConvexPoly;
 import static com.googlecode.javacv.cpp.opencv_core.cvGetSeqElem;
-import static com.googlecode.javacv.cpp.opencv_core.cvLoad;
-import static com.googlecode.javacv.cpp.opencv_core.cvPoint;
-import static com.googlecode.javacv.cpp.opencv_core.cvRectangle;
+//import static com.googlecode.javacv.cpp.opencv_core.cvLoad;
 import static com.googlecode.javacv.cpp.opencv_core.cvGetSize;
 
 import java.io.IOException;
@@ -24,8 +22,6 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,18 +31,18 @@ import com.googlecode.javacpp.Loader;
 import com.googlecode.javacv.*;
 import com.googlecode.javacv.FrameGrabber.Exception;
 import com.googlecode.javacv.cpp.*;
-import com.googlecode.javacv.cpp.opencv_core.CvContour;
+//import com.googlecode.javacv.cpp.opencv_core.CvContour;
 import com.googlecode.javacv.cpp.opencv_core.CvMemStorage;
 import com.googlecode.javacv.cpp.opencv_core.CvPoint;
-import com.googlecode.javacv.cpp.opencv_core.CvRect;
+//import com.googlecode.javacv.cpp.opencv_core.CvRect;
 import com.googlecode.javacv.cpp.opencv_core.CvScalar;
 import com.googlecode.javacv.cpp.opencv_core.CvSeq;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_imgproc.*;
-import static com.googlecode.javacv.cpp.opencv_calib3d.*;
-import static com.googlecode.javacv.cpp.opencv_objdetect.*;
+//import static com.googlecode.javacv.cpp.opencv_calib3d.*;
+//import static com.googlecode.javacv.cpp.opencv_objdetect.*;
 
 public class DotDetector {
 
@@ -65,9 +61,6 @@ public class DotDetector {
 	
 	private InetAddress serverAddress;
 	private int serverPort;
-
-	//Counter for current queue size
-	private int coordsInQueue = 0;
 
 	//Timer for the FPS counter
 	private Timer t;
@@ -212,9 +205,6 @@ public class DotDetector {
 		buffer+=",";
 		buffer+=y;
 		buffer+=" ";
-		
-		
-
 
 	}
 	
@@ -230,7 +220,6 @@ public class DotDetector {
 		socket.send(packet);
 		
 		buffer = "";
-		coordsInQueue = 0;
 	}
 
 	private void initNetwork(String serverAddress, int serverPort) throws SocketException, UnknownHostException {
