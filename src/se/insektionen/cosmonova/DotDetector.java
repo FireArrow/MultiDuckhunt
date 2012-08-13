@@ -72,7 +72,7 @@ public class DotDetector {
 
 		@Override
 		public void run() {
-			System.out.println(frames.get());
+			System.out.println("FPS: " + frames.get());
 			frames.set(0);
 		}
 	}
