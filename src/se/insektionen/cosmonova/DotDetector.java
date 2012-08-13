@@ -6,7 +6,6 @@
 //som i sin tur är beroende av OpenCV. Läs mer om, och hitta länkar till det, på http://code.google.com/p/javacv/wiki/Windows7AndOpenCV
 //
 
-//TODO Figure out which of these are actually needed for operation. The include list is copied from an example
 //import static com.googlecode.javacv.cpp.opencv_core.CV_AA;
 import static com.googlecode.javacv.cpp.opencv_core.cvCircle;
 import static com.googlecode.javacv.cpp.opencv_core.cvClearMemStorage;
@@ -46,7 +45,6 @@ import static com.googlecode.javacv.cpp.opencv_imgproc.*;
 
 public class DotDetector {
 
-	public static final short QUEUE_LENGTH = 100;
 	private static final String DEFAULT_SERVER_ADDRESS = "127.0.0.1";
 	private static final int DEFAULT_SERVER_PORT = 10001;
 
@@ -56,7 +54,7 @@ public class DotDetector {
 
 	//UDP prerequisites
 	private DatagramSocket socket;
-	private String buffer = "";//ByteBuffer.allocate(QUEUE_LENGTH*12); //One coordinate is 12 bytes, thus the times twelve
+	private String buffer = "";
 	private DatagramPacket packet;
 	
 	private InetAddress serverAddress;
@@ -131,6 +129,7 @@ public class DotDetector {
 		imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
 
 		while (realframe.isVisible() && detectframe.isVisible() && (grabbedImage = grabber.grab()) != null) {
+			
 			cvClearMemStorage(storage);
 
 			//Create detection image
@@ -200,7 +199,6 @@ public class DotDetector {
 		float x = fp.get(0);
 		float y = fp.get(1);
 
-		//One coordinate takes up 10 byte
 		buffer+=x;
 		buffer+=",";
 		buffer+=y;
@@ -211,14 +209,16 @@ public class DotDetector {
 	private void sendQueue() throws IOException {
 		
 		//Don't bother sending an empty queue
-		//if(coordsInQueue == 0) return;
 		if(buffer.isEmpty()){
-			buffer=" ";
+			return;
 		}
+		
+		//Prepare queue to be sent to server
 		byte[] data = buffer.getBytes();
 		packet = new DatagramPacket(data, data.length, serverAddress, serverPort);
 		socket.send(packet);
 		
+		//Clear queue
 		buffer = "";
 	}
 
