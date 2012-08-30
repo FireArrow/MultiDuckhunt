@@ -49,7 +49,7 @@ public class DotDetector {
 	private static final int DEFAULT_SERVER_PORT = 10001;
 
 	//Colors given in order BGR-A, Blue, Green, Red, Alpha
-	private static CvScalar min = cvScalar(255, 255, 255, 0);
+	private static CvScalar min = cvScalar(120, 255, 120, 0);
 	private static CvScalar max = cvScalar(255, 255, 255, 0);
 
 	//UDP prerequisites
@@ -143,7 +143,10 @@ public class DotDetector {
 
 			//Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
 			//should be fine as it is right now.
-			CvSeq seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, 2, 20, 20, 5, 3, 10);
+			/*
+			 * image, circleStorage, method, double dp,	double minDist,	double param1, double param2, int minRadius, int maxRadius
+			 */
+			CvSeq seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, 2, 20, 20, 2, 0, 10);
 
 			for(int i=0; i<seq.total(); i++){
 
