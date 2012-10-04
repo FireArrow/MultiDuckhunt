@@ -22,6 +22,7 @@
 			var c = calibrateAction( _server.getState, X, function( id, calibrator ) {
 				_engine.remove( id );
 				_engine.add( demo( calibrator ) );
+				_engine.add( dotcounter( function(){return calibrator.getAll().length}));
 			});
 			_engine.add( c );
 			_engine.start();

@@ -32,6 +32,18 @@ var ending = function( score ) {
 	};
 };
 
+// this is the dot counter
+var dotcounter = function( counter ) {
+	return {
+		id: "dotcounter",
+		draw: function( context, width, height, mark, keys ) {
+			context.fillStyle = "white";
+			context.font = "bold 20px Consolas, monospace";
+			context.fillText( counter(), 20, 20 );
+		}
+	};
+};
+
 // this is one enemy
 // this class is not added directly to the rendering engine, it should first go through the game engine
 var enemy = function( killed, intersectHit ){
