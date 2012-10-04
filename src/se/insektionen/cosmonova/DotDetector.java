@@ -8,6 +8,7 @@
 
 //import static com.googlecode.javacv.cpp.opencv_core.CV_AA;
 import static com.googlecode.javacv.cpp.opencv_core.cvCircle;
+import static com.googlecode.javacv.cpp.opencv_core.cvPutText;
 import static com.googlecode.javacv.cpp.opencv_core.cvClearMemStorage;
 //import static com.googlecode.javacv.cpp.opencv_core.cvDrawContours;
 //import static com.googlecode.javacv.cpp.opencv_core.cvFillConvexPoly;
@@ -47,6 +48,7 @@ public class DotDetector {
 
 	private static final String DEFAULT_SERVER_ADDRESS = "127.0.0.1";
 	private static final int DEFAULT_SERVER_PORT = 10001;
+	private static final CvFont font = new CvFont(CV_FONT_HERSHEY_PLAIN, 1, 1); 
 
 	//Colors given in order BGR-A, Blue, Green, Red, Alpha
 	private static CvScalar min = cvScalar(120, 255, 120, 0);
@@ -65,6 +67,10 @@ public class DotDetector {
 
 	//Counter to be used for counting the number of frames per second
 	private AtomicInteger frames = new AtomicInteger(0);
+	
+	//Variable holding latest known FPS. This is used to print the FPS to
+	//the image window
+	private AtomicInteger lastKnownFPS = new AtomicInteger(0);
 
 	//FPS counter class. Prints and resets the above defined counter.
 	//Should preferably be set to execute once every second
@@ -72,8 +78,9 @@ public class DotDetector {
 
 		@Override
 		public void run() {
-			System.out.println("FPS: " + frames.get());
-			frames.set(0);
+			int fps = frames.getAndSet(0);
+			lastKnownFPS.set(fps);
+			System.out.println("FPS: " + fps);
 		}
 	}
 
@@ -158,6 +165,10 @@ public class DotDetector {
 				//Buffer current circle to be sent to the server
 				addPointToSendQueue(point);
 			}
+			
+			//Print some statistics to the image
+			cvPutText(grabbedImage, "Dots: " + seq.total(), cvPoint(10, 20), font, CvScalar.WHITE);
+			cvPutText(grabbedImage, "FPS: " + lastKnownFPS.get(), cvPoint(realframe.getWidth()-100, 20), font, CvScalar.WHITE);
 
 			//Show images 
 			//TODO Comment these out will probably improve performance quite a bit
