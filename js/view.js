@@ -1,9 +1,9 @@
 // simplified viewport, it cant move
 var makeView = function( starting_position, starting_updirection, starting_rightdirection )
 {
-	var pos = starting_position || vec();
-	var u = starting_updirection || vec({x:1,y:0,z:0}).unit();
-	var v = starting_rightdirection || vec({x:0,y:1,z:0}).unit();
+	var pos = starting_position || new Vec();
+	var u = starting_updirection || new Vec([1,0,0]).unit();
+	var v = starting_rightdirection || new Vec([0,1,0]).unit();
 	var n = u.cross( v );
 	var fovx = 1;
 	var fovy = 1;

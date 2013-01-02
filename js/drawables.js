@@ -58,8 +58,8 @@ var enemy = function( killed, intersectHit ){
 	var islive = -1; // timestamp for when enemy was killed
 	var angle = 0; // current angle of rotation (used during death animation)
 	var _size = 100;
-	var position = vec(); // our position in a three dimensional vector room
-	var velocity = vec(); // our velocity in a three dimensional vector room
+	var position = new Vec(); // our position in a three dimensional vector room
+	var velocity = new Vec(); // our velocity in a three dimensional vector room
 	
 	
 	// function that resets all values
@@ -68,13 +68,13 @@ var enemy = function( killed, intersectHit ){
 		islive = -1;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
-		position = vec({x:(Math.random()-0.5)*400, 
-						y:(Math.random()-0.5)*400,
-						z:Math.random()*100 + 10000});
+		position = new Vec([(Math.random()-0.5)*400,
+					(Math.random()-0.5)*400,
+						Math.random()*100 + 10000]);
 		// reset starting velocity to be almost directed towards the camera
-		velocity = vec({x:(Math.random()-0.5)*0.7,
-						y:(Math.random()-0.5)*0.7,
-						z:(-1)*(4+Math.random())});
+		velocity = new Vec([(Math.random()-0.5)*0.7,
+						(Math.random()-0.5)*0.7,
+						(-1)*(4+Math.random())]);
 		};
 	reset();
 	var wasHit = function(mark){
@@ -82,11 +82,10 @@ var enemy = function( killed, intersectHit ){
 		killed();
 		islive = mark;
 		// transform velocity to be more toward the side than toward the camera
-		velocity = vec({
-			x: velocity.x()*10,
-			y: velocity.y()*10,
-			z: velocity.z()/10
-		});
+		velocity = new Vec([
+			velocity.x()*10,
+			 velocity.y()*10,
+			 velocity.z()/10]);
 	};
 
 	return {
