@@ -16,6 +16,8 @@ import static com.googlecode.javacv.cpp.opencv_core.cvGetSeqElem;
 //import static com.googlecode.javacv.cpp.opencv_core.cvLoad;
 import static com.googlecode.javacv.cpp.opencv_core.cvGetSize;
 
+import java.awt.HeadlessException;
+import java.awt.Toolkit;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -25,6 +27,8 @@ import java.net.UnknownHostException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.swing.JFrame;
 
 import com.googlecode.javacpp.FloatPointer;
 import com.googlecode.javacpp.Loader;
@@ -87,13 +91,12 @@ public class DotDetector {
 	private FrameGrabber grabber;
 	private CanvasFrame realframe;
 	private CanvasFrame detectframe;
+//	private DotDetectorGUI detectorFrame;
 	private CvMemStorage storage;
 	private IplImage grabbedImage;
 	private IplImage imgThreshold;
 
 	public DotDetector() {
-
-		
 		
 		//Set up the FPS counter
 		t = new Timer();
@@ -120,7 +123,16 @@ public class DotDetector {
 
 	}
 
-	public void start(String serverAddress, int serverPort) throws Exception, IOException {
+	public void start(String serverAddress, int serverPort, boolean headless) throws Exception, IOException {
+		
+		if(!headless) {
+			try {
+//			detectorFrame = new DotDetectorGUI();
+			}
+			catch(HeadlessException e) {
+				System.err.println("Detector started in a headless environment. Add --headless to suppress this warning and slightly faster start-up.\nTerminate with Ctrl-c");
+			}
+		}
 
 		//Initialize the network component here to avoid throwing exceptions from the constructor
 		initNetwork(serverAddress, serverPort);
@@ -145,8 +157,8 @@ public class DotDetector {
 
 			//Flip images to act as a mirror. 
 			//TODO remove when camera faces screen
-			cvFlip(grabbedImage, grabbedImage, 1);
-			cvFlip(imgThreshold, imgThreshold, 1);
+			//cvFlip(grabbedImage, grabbedImage, 1);
+			//cvFlip(imgThreshold, imgThreshold, 1);
 
 			//Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
 			//should be fine as it is right now.
@@ -260,7 +272,7 @@ public class DotDetector {
 		}
 		DotDetector dd = new DotDetector();
 		try {
-			dd.start(serverAddress, serverPort);
+			dd.start(serverAddress, serverPort, false); //TODO lägg in ett sätt att välja detta. jag orkar inte nu
 		} catch(Exception e) {
 			e.printStackTrace();
 		} catch(SocketException e) {
