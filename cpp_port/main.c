@@ -16,13 +16,34 @@
 #define DEFAULT_SERVER_ADDRESS "127.0.0.1"
 #define DEFAULT_SERVER_PORT 10001
 
-//Flags
+// States
 #define GRAB_DOTS 1
 #define CALIBRATE 2
 
-//Colors given in order BGR-A, Blue, Green, Red, Alpha
+// Cornors of the calibrator
+//
+// 0 ------- 1
+// |        /
+// |       /
+// 3 ---- 2
+
+#define TOP_LEFT 0
+#define TOP_RIGHT 1
+#define BOTTOM_RIGHT 2
+#define BOTTOM_LEFT 3
+
+// Colors given in order BGR-A, Blue, Green, Red, Alpha
 const CvScalar min = {120, 255, 120, 0};
 const CvScalar max = {255, 255, 255, 0};
+
+struct {
+    CvPoint topLeft;
+    CvPoint topRight;
+    CvPoint bottomRight;
+    CvPoint bottomLeft;
+} DD_calibration;
+
+static char state = GRAB_DOTS;
 
 typedef struct SendQueue {
     float point[2]; // x and y
@@ -158,26 +179,61 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
 }
 
 
-void calibrateClick(int event, int x, int y, int flags, void* param) {
+void calibrateClick(int event, int x, int y, int flags, void* param) 
+{
+    int* currentCalibrationPoint = (int *) param;
+    if(state == CALIBRATE) {
+        if(event == CV_EVENT_LBUTTONDOWN) {
+            if(*currentCalibrationPoint <= BOTTOM_LEFT) { // This should be a unneccessaru clause
 
+                printf("Calibrating point %d\n", *currentCalibrationPoint);
+                CvPoint p = { x, y };
+                switch(*currentCalibrationPoint) {
+                    case TOP_LEFT:      DD_calibration.topLeft      = p; break;
+                    case TOP_RIGHT:     DD_calibration.topRight     = p; break;
+                    case BOTTOM_RIGHT:  DD_calibration.bottomRight  = p; break;
+                    case BOTTOM_LEFT:   DD_calibration.bottomLeft   = p; break;
+                }
+                ++(*currentCalibrationPoint);
+                if(*currentCalibrationPoint > BOTTOM_LEFT) {
+                    state = GRAB_DOTS;
+                }
+            }
+        }
+    }
 }
+
+void paintCalibrationPoints(IplImage* grabbedImage) {
+    cvCircle(grabbedImage, DD_calibration.topLeft, 2, cvScalar(BLUE), -1, 8, 0); //BLUE gives red, don't argue :S
+    cvLine(grabbedImage, DD_calibration.topLeft, DD_calibration.topRight, cvScalar(BLUE), 1, 8, 0);
+    cvCircle(grabbedImage, DD_calibration.topRight, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_calibration.topRight, DD_calibration.bottomRight, cvScalar(BLUE), 1, 8, 0);
+    cvCircle(grabbedImage, DD_calibration.bottomLeft, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_calibration.bottomRight, DD_calibration.bottomLeft, cvScalar(BLUE), 1, 8, 0);
+    cvCircle(grabbedImage, DD_calibration.bottomRight, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_calibration.bottomLeft, DD_calibration.topLeft, cvScalar(BLUE), 1, 8, 0);
+}
+
+//void drawMask(IplImage* img) {
+    
 
 int run(const char *serverAddress, const int serverPort, char headless)
 {
-    int i, sockfd, show = ~0;
+    int i, sockfd, show = ~0, flip = ~0;
     int frames = 0;
     int returnValue = EXIT_SUCCESS;
     CvCapture *capture;
     CvMemStorage *storage;
     IplImage *grabbedImage;
     IplImage *imgThreshold;
+    IplImage *mask;
     CvSeq *seq;
     CvFont font;
     SendQueue *queue;
     char strbuf[255];
     struct timeval oldTime, time, diff;
     float lastKnownFPS = 0;
-    char state = GRAB_DOTS;
+    int currentCalibrationPoint = TOP_LEFT;
 
     sockfd = initNetwork(serverAddress, serverPort);
     if (sockfd == -1) {
@@ -195,11 +251,31 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
     // Create a window in which the captured images will be presented
     cvNamedWindow("mywindow", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("debugwindow", CV_WINDOW_AUTOSIZE);
 
     storage = cvCreateMemStorage(0);
 
     // void cvInitFont(font, font_face, hscale, vscale, shear=0, thickness=1, line_type=8 )
     cvInitFont(&font, CV_FONT_HERSHEY_PLAIN, 1, 1, 0, 1, 8);
+
+    // Grab an initial image to be able to fetch image size before the main loop.
+    grabbedImage = cvQueryFrame(capture);
+
+    // Set calibration defaults TODO load from file?
+    DD_calibration.topLeft.x = 0;  
+    DD_calibration.topLeft.y = 0;
+
+    DD_calibration.topRight.x = grabbedImage->width-1;
+    DD_calibration.topRight.y = 0;
+
+    DD_calibration.bottomLeft.x = 0;
+    DD_calibration.bottomLeft.y = grabbedImage->height-1;
+
+    DD_calibration.bottomRight.x = grabbedImage->width-1;
+    DD_calibration.bottomRight.y = grabbedImage->height-1;
+
+    // Set callback function for mouse clicks
+    cvSetMouseCallback("mywindow", calibrateClick, (void*) &currentCalibrationPoint);
 
     gettimeofday(&oldTime, NULL);
     // Show the image captured from the camera in the window and repeat
@@ -216,18 +292,23 @@ int run(const char *serverAddress, const int serverPort, char headless)
             break;
         }
 
+        //Flip images to act as a mirror. 
+        if (show && flip) {
+            cvFlip(grabbedImage, grabbedImage, 1);
+        }
+
+        // ------ State based actions
         switch(state) {
             case GRAB_DOTS:
                 //Create detection image
                 imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvInRangeS(grabbedImage, min, max, imgThreshold);
 
-                //Flip images to act as a mirror. 
-                //TODO remove when camera faces screen
-                if (show) {
-                    cvFlip(grabbedImage, grabbedImage, 1);
-                    cvFlip(imgThreshold, imgThreshold, 1);
-                }
+                mask = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
+                cvZero(mask);
+                cvFillConvexPoly(mask, (CvPoint*) &DD_calibration, 4, cvScalar(RED), 1, 0);
+                //cvCopy(imgThreshold, imgThreshold, mask);
+                cvAnd(imgThreshold, mask, imgThreshold, NULL);
 
                 //Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
                 //should be fine as it is right now.
@@ -247,21 +328,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
                     addPointToSendQueue(p, queue);
                 }
 
-                //Print some statistics to the image
-                if (show) {
-                    snprintf(strbuf, sizeof(strbuf), "Dots: %i", seq->total);
-                    cvPutText(grabbedImage, strbuf, cvPoint(10, 20), &font, cvScalar(WHITE));
-                    snprintf(strbuf, sizeof(strbuf), "FPS: %.1f", lastKnownFPS);
-                    cvPutText(grabbedImage, strbuf, cvPoint(10, 200), &font, cvScalar(WHITE));
-                }
-
-                //Show images 
-                //TODO Comment these out will probably improve performance quite a bit
-                if (show) {
-                    cvShowImage("mywindow", imgThreshold);
-                    cvShowImage("mywindow", grabbedImage);
-                }
-
                 gettimeofday(&time, NULL);
                 timeval_subtract(&diff, &time, &oldTime);
                 //		printf("Frames = %i\n", diff.tv_sec);
@@ -279,50 +345,73 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
             case CALIBRATE:
 
+
                 break; //End of CALIBRATE
-            }
-                //Add one to the frame rate counter
-                frames++;
-                //If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
-                //remove higher bits using AND operator
-                i = (cvWaitKey(10) & 0xff);
-                if (i == 'v') show = ~show;
-                if (i == 27) break;
-        } //End of main while-loop
-
-        // Release the capture device housekeeping
-        cvReleaseCapture( &capture );
-        cvDestroyWindow( "mywindow" );
-        destroySendQueue(queue);
-        close(sockfd);
-        return returnValue;
-    }
-
-    int main(int argc, char **argv)
-    {
-        int ret;
-        long int serverPort = DEFAULT_SERVER_PORT;
-        char *serverAddress = NULL;
-        switch(argc) {
-            case 3: 
-                serverPort = strtol(argv[2], NULL, 10);
-                if (serverPort >= 65535 || serverPort <= 1024) {
-                    printf("Invalid port number! Using %i\n", DEFAULT_SERVER_PORT);
-                    serverPort = DEFAULT_SERVER_PORT;
-                }
-            case 2:
-                serverAddress = strdup(argv[1]);
-            default:
-                if (serverAddress == NULL) {
-                    printf("Invalid hostname! Using %s\n", DEFAULT_SERVER_ADDRESS);
-                    serverAddress = strdup(DEFAULT_SERVER_ADDRESS);
-                }
         }
-        printf("Server address: %s\n", serverAddress);
-        printf("Server port: %d\n", (int)serverPort);
 
-        ret = run(serverAddress, serverPort, 1);
-        free(serverAddress);
-        return ret;
+        // Paint calibration points
+        paintCalibrationPoints(grabbedImage);
+
+        //Print some statistics to the image
+        if (show) {
+            snprintf(strbuf, sizeof(strbuf), "Dots: %i", seq->total);
+            cvPutText(grabbedImage, strbuf, cvPoint(10, 20), &font, cvScalar(WHITE));
+            snprintf(strbuf, sizeof(strbuf), "FPS: %.1f", lastKnownFPS);
+            cvPutText(grabbedImage, strbuf, cvPoint(10, 200), &font, cvScalar(WHITE));
+        }
+
+        //Show images 
+        //TODO Comment these out will probably improve performance quite a bit
+        if (show) {
+            //     cvShowImage("mywindow", imgThreshold);
+            cvShowImage("mywindow", grabbedImage);
+        }
+
+        //Add one to the frame rate counter
+        frames++;
+        //If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
+        //remove higher bits using AND operator
+        i = (cvWaitKey(10) & 0xff);
+        if (i == 'v') show = ~show;
+        if (i == 'r') { state = CALIBRATE; currentCalibrationPoint = TOP_LEFT; }
+        if (i == 'f') flip = ~flip;
+        if (i == 27) break;
+    } //End of main while-loop
+
+    // Release the capture device housekeeping
+    cvReleaseCapture( &capture );
+    cvDestroyWindow( "mywindow" );
+    cvDestroyWindow( "debugwindow" ); //TODO remove
+    destroySendQueue(queue);
+    close(sockfd);
+    return returnValue;
+}
+
+int main(int argc, char **argv)
+{
+    int ret;
+    long int serverPort = DEFAULT_SERVER_PORT;
+    char *serverAddress = NULL;
+    switch(argc) {
+        case 3: 
+            serverPort = strtol(argv[2], NULL, 10);
+            if (serverPort >= 65535 || serverPort <= 1024) {
+                printf("Invalid port number! Using %i\n", DEFAULT_SERVER_PORT);
+                serverPort = DEFAULT_SERVER_PORT;
+            }
+        case 2:
+            serverAddress = strdup(argv[1]);
+        default:
+            if (serverAddress == NULL) {
+                printf("Invalid hostname! Using %s\n", DEFAULT_SERVER_ADDRESS);
+                serverAddress = strdup(DEFAULT_SERVER_ADDRESS);
+            }
     }
+    printf("Server address: %s\n", serverAddress);
+    printf("Server port: %d\n", (int)serverPort);
+
+    ret = run(serverAddress, serverPort, 1);
+    free(serverAddress);
+    return ret;
+}
 
