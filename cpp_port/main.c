@@ -251,7 +251,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
     // Create a window in which the captured images will be presented
     cvNamedWindow("mywindow", CV_WINDOW_AUTOSIZE);
-    cvNamedWindow("debugwindow", CV_WINDOW_AUTOSIZE);
 
     storage = cvCreateMemStorage(0);
 
@@ -381,7 +380,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
     // Release the capture device housekeeping
     cvReleaseCapture( &capture );
     cvDestroyWindow( "mywindow" );
-    cvDestroyWindow( "debugwindow" ); //TODO remove
     destroySendQueue(queue);
     close(sockfd);
     return returnValue;
