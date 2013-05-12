@@ -224,9 +224,9 @@ int run(const char *serverAddress, const int serverPort, char headless)
     int returnValue = EXIT_SUCCESS;
     CvCapture *capture;
     CvMemStorage *storage;
-    IplImage *grabbedImage;
-    IplImage *imgThreshold;
-    IplImage *mask;
+    IplImage *grabbedImage = NULL;
+    IplImage *imgThreshold = NULL;
+    IplImage *mask = NULL;
     CvSeq *seq;
     CvFont font;
     SendQueue *queue;
@@ -281,7 +281,9 @@ int run(const char *serverAddress, const int serverPort, char headless)
     while (1) {
 
         // ------ Common actions
+        //
         cvClearMemStorage(storage);
+
 
         grabbedImage = cvQueryFrame(capture);
         if (grabbedImage == NULL) {
@@ -299,6 +301,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
         // ------ State based actions
         switch(state) {
             case GRAB_DOTS:
+
                 //Create detection image
                 imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvInRangeS(grabbedImage, min, max, imgThreshold);
@@ -366,6 +369,10 @@ int run(const char *serverAddress, const int serverPort, char headless)
             cvShowImage("mywindow", grabbedImage);
         }
 
+        //Release the temporary images
+        cvReleaseImage(&imgThreshold);
+        cvReleaseImage(&mask);
+
         //Add one to the frame rate counter
         frames++;
         //If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
@@ -378,7 +385,9 @@ int run(const char *serverAddress, const int serverPort, char headless)
     } //End of main while-loop
 
     // Release the capture device housekeeping
+    cvReleaseImage(&grabbedImage);
     cvReleaseCapture( &capture );
+    cvReleaseMemStorage( &storage );
     cvDestroyWindow( "mywindow" );
     destroySendQueue(queue);
     close(sockfd);
