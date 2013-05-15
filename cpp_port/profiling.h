@@ -9,7 +9,7 @@ struct timeval profile_before, profile_after;
 
 #else
 
-#define PROFILING_PRO_STAMP
+#define PROFILING_PRO_STAMP()
 #define PROFILING_POST_STAMP(x)
 
 #endif
