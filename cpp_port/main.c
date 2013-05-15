@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include "profiling.h"
 
 #define RED 255, 0, 0, 0
 #define GREEN 0, 255, 0, 0
@@ -279,13 +280,14 @@ int run(const char *serverAddress, const int serverPort, char headless)
     gettimeofday(&oldTime, NULL);
     // Show the image captured from the camera in the window and repeat
     while (1) {
+//PROFILING_PRO_STAMP(); //Uncomment this and comment all but the last PROFILING_* to profile main-loop
 
         // ------ Common actions
-        //
         cvClearMemStorage(storage);
 
-
+        PROFILING_PRO_STAMP();
         grabbedImage = cvQueryFrame(capture);
+        PROFILING_POST_STAMP("cvQueryFrame");
         if (grabbedImage == NULL) {
             fprintf( stderr, "ERROR: frame is null...\n" );
             getchar();
@@ -309,7 +311,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 mask = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvZero(mask);
                 cvFillConvexPoly(mask, (CvPoint*) &DD_calibration, 4, cvScalar(RED), 1, 0);
-                //cvCopy(imgThreshold, imgThreshold, mask);
                 cvAnd(imgThreshold, mask, imgThreshold, NULL);
 
                 //Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
@@ -317,8 +318,12 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 /*
                  * image, circleStorage, method, double dp,	double minDist,	double param1, double param2, int minRadius, int maxRadius
                  */
+                
+                PROFILING_PRO_STAMP();
                 seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, 2, 20, 20, 2, 0, 10);
+                PROFILING_POST_STAMP("cvHoughCircles");
 
+                PROFILING_PRO_STAMP();
                 for (i = 0; i < seq->total; i++){
                     // Get point
                     float *p = (float*)cvGetSeqElem(seq, i);
@@ -329,6 +334,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
                     //Buffer current circle to be sent to the server
                     addPointToSendQueue(p, queue);
                 }
+                PROFILING_POST_STAMP("Painting dots");
 
                 gettimeofday(&time, NULL);
                 timeval_subtract(&diff, &time, &oldTime);
@@ -340,18 +346,22 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 }
 
                 //Send to dots detected this frame to the server
+                PROFILING_PRO_STAMP();
                 sendQueue(sockfd, queue);
                 clearSendQueue(queue);
+                PROFILING_POST_STAMP("Sending dots");
+
                 break; //End of GRAB_DOTS
 
 
             case CALIBRATE:
 
+                //One day we might do something here
 
                 break; //End of CALIBRATE
         }
 
-        // Paint calibration points
+        // Paint the corners of the detecting area
         paintCalibrationPoints(grabbedImage);
 
         //Print some statistics to the image
@@ -382,6 +392,8 @@ int run(const char *serverAddress, const int serverPort, char headless)
         if (i == 'r') { state = CALIBRATE; currentCalibrationPoint = TOP_LEFT; }
         if (i == 'f') flip = ~flip;
         if (i == 27) break;
+
+//PROFILING_POST_STAMP("Main loop");
     } //End of main while-loop
 
     // Release the capture device housekeeping
