@@ -33,9 +33,18 @@
 #define BOTTOM_RIGHT 2
 #define BOTTOM_LEFT 3
 
-// Colors given in order BGR-A, Blue, Green, Red, Alpha
-const CvScalar min = {120, 255, 120, 0};
-const CvScalar max = {255, 255, 255, 0};
+#define DD_COLOR(c) c.blue, c.green, c.red, c.alpha
+// cvScalar, used to handle colors in OpenCV uses doules internally.
+// This causes problems when using a slider to set the color as that
+// wants the address to an int. Thus, we store colors in a struct of
+// ints and use cvScalar() to create the scalars when needed.
+struct color {
+    int red;
+    int green;
+    int blue;
+    int alpha;
+};
+typedef struct color Color;
 
 struct {
     CvPoint topLeft;
@@ -223,6 +232,10 @@ int run(const char *serverAddress, const int serverPort, char headless)
     int i, sockfd, show = ~0, flip = ~0;
     int frames = 0;
     int returnValue = EXIT_SUCCESS;
+    Color min = {255, 120, 120, 0};
+    Color max = {255, 255, 255, 0};
+//    CvScalar min = {120, 255, 120, 0}; 
+//    CvScalar max = {255, 255, 255, 0};
     CvCapture *capture;
     CvMemStorage *storage;
     IplImage *grabbedImage = NULL;
@@ -252,6 +265,12 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
     // Create a window in which the captured images will be presented
     cvNamedWindow("mywindow", CV_WINDOW_AUTOSIZE);
+
+    // Create sliders to adjust the lower color boundry
+    cvCreateTrackbar("Red", "mywindow", &min.red, 255, NULL);
+    cvCreateTrackbar("Green", "mywindow", &min.green, 255, NULL);
+    cvCreateTrackbar("Blue", "mywindow", &min.blue, 255, NULL);
+    printf("%d %d %d %d\n", DD_COLOR(min));
 
     storage = cvCreateMemStorage(0);
 
@@ -306,7 +325,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
                 //Create detection image
                 imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
-                cvInRangeS(grabbedImage, min, max, imgThreshold);
+                cvInRangeS(grabbedImage, cvScalar(DD_COLOR(min)), cvScalar(DD_COLOR(max)), imgThreshold);
 
                 mask = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvZero(mask);
@@ -369,7 +388,8 @@ int run(const char *serverAddress, const int serverPort, char headless)
             snprintf(strbuf, sizeof(strbuf), "Dots: %i", seq->total);
             cvPutText(grabbedImage, strbuf, cvPoint(10, 20), &font, cvScalar(WHITE));
             snprintf(strbuf, sizeof(strbuf), "FPS: %.1f", lastKnownFPS);
-            cvPutText(grabbedImage, strbuf, cvPoint(10, 200), &font, cvScalar(WHITE));
+            cvPutText(grabbedImage, strbuf, cvPoint(10, 40), &font, cvScalar(WHITE));
+            cvCircle(grabbedImage, cvPoint(15, 55), 5, cvScalar(min.blue, min.green, min.red, min.alpha), -1, 8, 0); // Colors given in order BGR-A, Blue, Green, Red, Alpha
         }
 
         //Show images 
