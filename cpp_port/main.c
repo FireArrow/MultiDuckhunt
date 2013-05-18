@@ -224,18 +224,15 @@ void paintCalibrationPoints(IplImage* grabbedImage) {
     cvLine(grabbedImage, DD_calibration.bottomLeft, DD_calibration.topLeft, cvScalar(BLUE), 1, 8, 0);
 }
 
-//void drawMask(IplImage* img) {
-    
 
 int run(const char *serverAddress, const int serverPort, char headless)
 {
     int i, sockfd, show = ~0, flip = ~0;
+    int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
     int frames = 0;
     int returnValue = EXIT_SUCCESS;
     Color min = {255, 120, 120, 0};
     Color max = {255, 255, 255, 0};
-//    CvScalar min = {120, 255, 120, 0}; 
-//    CvScalar max = {255, 255, 255, 0};
     CvCapture *capture;
     CvMemStorage *storage;
     IplImage *grabbedImage = NULL;
@@ -264,13 +261,22 @@ int run(const char *serverAddress, const int serverPort, char headless)
     }
 
     // Create a window in which the captured images will be presented
-    cvNamedWindow("mywindow", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("imagewindow", CV_WINDOW_AUTOSIZE);
 
-    // Create sliders to adjust the lower color boundry
-    cvCreateTrackbar("Red", "mywindow", &min.red, 255, NULL);
-    cvCreateTrackbar("Green", "mywindow", &min.green, 255, NULL);
-    cvCreateTrackbar("Blue", "mywindow", &min.blue, 255, NULL);
-    printf("%d %d %d %d\n", DD_COLOR(min));
+    // Create a window to hold the configuration sliders TODO This is kind of a hack. Make a better solution
+    cvNamedWindow("configwindow", CV_WINDOW_AUTOSIZE);
+
+    // Create sliders to adjust the lower color boundry, param 1 and 2 for the circle detector (whatever they do?)
+    cvCreateTrackbar("Red",     "configwindow", &min.red,   255,    NULL);
+    cvCreateTrackbar("Green",   "configwindow", &min.green, 255,    NULL);
+    cvCreateTrackbar("Blue",    "configwindow", &min.blue,  255,    NULL);
+
+    cvCreateTrackbar("DP",      "configwindow", &dp,        10,     NULL); // I have no idea what this parameter do =S
+    cvCreateTrackbar("MinDist", "configwindow", &minDist,   100,    NULL);
+    cvCreateTrackbar("Param1",  "configwindow", &param1,    50,     NULL); // Nor this...
+    cvCreateTrackbar("Param2",  "configwindow", &param2,    50,     NULL); // nor this.
+    cvCreateTrackbar("MinRad",  "configwindow", &minRadius, 100,    NULL);
+    cvCreateTrackbar("MaxRad",  "configwindow", &maxRadius, 300,    NULL);
 
     storage = cvCreateMemStorage(0);
 
@@ -294,7 +300,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     DD_calibration.bottomRight.y = grabbedImage->height-1;
 
     // Set callback function for mouse clicks
-    cvSetMouseCallback("mywindow", calibrateClick, (void*) &currentCalibrationPoint);
+    cvSetMouseCallback("imagewindow", calibrateClick, (void*) &currentCalibrationPoint);
 
     gettimeofday(&oldTime, NULL);
     // Show the image captured from the camera in the window and repeat
@@ -339,7 +345,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
                  */
                 
                 PROFILING_PRO_STAMP();
-                seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, 2, 20, 20, 2, 0, 10);
+                seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, dp+1, minDist+1, param1+1, param2+1, minRadius, maxRadius);
                 PROFILING_POST_STAMP("cvHoughCircles");
 
                 PROFILING_PRO_STAMP();
@@ -393,10 +399,9 @@ int run(const char *serverAddress, const int serverPort, char headless)
         }
 
         //Show images 
-        //TODO Comment these out will probably improve performance quite a bit
         if (show) {
-            //     cvShowImage("mywindow", imgThreshold);
-            cvShowImage("mywindow", grabbedImage);
+            //     cvShowImage("imagewindow", imgThreshold);
+            cvShowImage("imagewindow", grabbedImage);
         }
 
         //Release the temporary images
@@ -420,7 +425,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     cvReleaseImage(&grabbedImage);
     cvReleaseCapture( &capture );
     cvReleaseMemStorage( &storage );
-    cvDestroyWindow( "mywindow" );
+    cvDestroyWindow( "imagewindow" );
     destroySendQueue(queue);
     close(sockfd);
     return returnValue;
