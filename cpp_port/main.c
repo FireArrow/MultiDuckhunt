@@ -134,7 +134,7 @@ void sendQueue(int sockfd, SendQueue *q)
 
     // Skip first entry
     q = q->next;
-    while (q != NULL) {
+    while (q != NULL) { //TODO buffer overflow here? segfaults when sending very many dots
         ret = snprintf(&buf[len], sizeof(buf) - strlen(buf), "%.2f,%f ", q->point[0], q->point[1]);
         if (ret < 0) {
             printf("Foo\n");
@@ -253,10 +253,19 @@ int run(const char *serverAddress, const int serverPort, char headless)
     }
     queue = initSendQueue();
 
-    capture = cvCaptureFromCAM(CV_CAP_ANY);
+//    capture = cvCaptureFromCAM(CV_CAP_ANY);
+
+//  Capture from the highest connected device number. This is a really
+//  bad solution, but it'll have to do for now. TODO Make this better
+    for( i = 5; i >= 0; --i ) {
+        capture = cvCaptureFromCAM(i);    
+        if (capture != NULL) {
+            break;
+        }
+    }
     if (capture == NULL) {
         fprintf( stderr, "ERROR: capture is NULL \n" );
-        getchar();
+//        getchar();
         return EXIT_FAILURE;
     }
 
