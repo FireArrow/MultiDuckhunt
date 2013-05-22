@@ -5,13 +5,15 @@ the web server part. The white dots are intended to be laser dots, but any brigh
 
 Java implementation
 -----------
-The image analyzer depends on JavaCV, available at [http://code.google.com/p/javacv/]
-Instructions how to JavaCV available at (http://code.google.com/p/javacv/wiki/Windows7AndOpenCV)
+
+* The image analyzer depends on JavaCV, available at http://code.google.com/p/javacv/
+* * Instructions how to JavaCV available at http://code.google.com/p/javacv/wiki/Windows7AndOpenCV
+
 It is prefable to create a folder called "lib" and place libraries there, as that is what
 the supplied build-file expects.
 
 Build the project using the supplied ant-file and start it with
-java -cp [your library path] se.insektionen.cosmonova.DotDetector
+    java -cp [your library path] se.insektionen.cosmonova.DotDetector
 
 An easier way to do it is to import the whole thing into Eclipse and run it from there (or export a jar-file)
 
@@ -23,10 +25,11 @@ See folder cpp_port
 Web server
 ===========
 
-Depends on [http://nodejs.org]
+Depends on http://nodejs.org
+
 Reads udp packets from image analyzer and delivers static web content and the image data from the analyzers on request.
 
-Download nodejs from above url, install, start nodejs/start.bat
+* Download nodejs from above url, install, start nodejs/start.bat
 
 
 
