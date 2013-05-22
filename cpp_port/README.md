@@ -21,7 +21,7 @@ On rasberry pi
 
 * apt-get install git
 * git clone (https://github.com/FireArrow/MultiDuckhunt.git)
-* download and install opencv. instructions at (http://opencv.willowgarage.com/wiki/InstallGuide%20%3A%20Debian)
+* download and install opencv. instructions at http://opencv.willowgarage.com/wiki/InstallGuide%20%3A%20Debian (Note: this takes ages!)
 * cd MultiDuckhunt/cpp_port
 * make
 
