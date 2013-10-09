@@ -10,8 +10,8 @@
 #include "profiling.h"
 
 #define RED 255, 0, 0, 0
-#define GREEN 0, 255, 0, 0
-#define BLUE 0, 0, 255, 0
+#define GREEN 0, 0, 255, 0
+#define BLUE 0, 255, 0, 0
 #define WHITE 255, 255, 255, 0
 
 #define DEFAULT_SERVER_ADDRESS "127.0.0.1"
@@ -214,14 +214,14 @@ void calibrateClick(int event, int x, int y, int flags, void* param)
 }
 
 void paintCalibrationPoints(IplImage* grabbedImage) {
-    cvCircle(grabbedImage, DD_calibration.topLeft, 2, cvScalar(BLUE), -1, 8, 0); //BLUE gives red, don't argue :S
-    cvLine(grabbedImage, DD_calibration.topLeft, DD_calibration.topRight, cvScalar(BLUE), 1, 8, 0);
+    cvCircle(grabbedImage, DD_calibration.topLeft, 2, cvScalar(BLUE), -1, 8, 0); 
+    cvLine(grabbedImage, DD_calibration.topLeft, DD_calibration.topRight, cvScalar(GREEN), 1, 8, 0);
     cvCircle(grabbedImage, DD_calibration.topRight, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_calibration.topRight, DD_calibration.bottomRight, cvScalar(BLUE), 1, 8, 0);
+    cvLine(grabbedImage, DD_calibration.topRight, DD_calibration.bottomRight, cvScalar(GREEN), 1, 8, 0);
     cvCircle(grabbedImage, DD_calibration.bottomLeft, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_calibration.bottomRight, DD_calibration.bottomLeft, cvScalar(BLUE), 1, 8, 0);
+    cvLine(grabbedImage, DD_calibration.bottomRight, DD_calibration.bottomLeft, cvScalar(GREEN), 1, 8, 0);
     cvCircle(grabbedImage, DD_calibration.bottomRight, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_calibration.bottomLeft, DD_calibration.topLeft, cvScalar(BLUE), 1, 8, 0);
+    cvLine(grabbedImage, DD_calibration.bottomLeft, DD_calibration.topLeft, cvScalar(GREEN), 1, 8, 0);
 }
 
 
@@ -231,7 +231,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
     int frames = 0;
     int returnValue = EXIT_SUCCESS;
-    Color min = {255, 120, 120, 0};
+    Color min = {250, 120, 120, 0};
     Color max = {255, 255, 255, 0};
     CvCapture *capture;
     CvMemStorage *storage;
@@ -409,7 +409,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
         //Show images 
         if (show) {
-            //     cvShowImage("imagewindow", imgThreshold);
+            cvShowImage("configwindow", imgThreshold);
             cvShowImage("imagewindow", grabbedImage);
         }
 
@@ -430,11 +430,12 @@ int run(const char *serverAddress, const int serverPort, char headless)
 //PROFILING_POST_STAMP("Main loop");
     } //End of main while-loop
 
-    // Release the capture device housekeeping
+    // Release the capture device and do some housekeeping
     cvReleaseImage(&grabbedImage);
     cvReleaseCapture( &capture );
     cvReleaseMemStorage( &storage );
     cvDestroyWindow( "imagewindow" );
+    cvDestroyWindow( "configwindow" );
     destroySendQueue(queue);
     close(sockfd);
     return returnValue;
