@@ -253,8 +253,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
     }
     queue = initSendQueue();
 
-//    capture = cvCaptureFromCAM(CV_CAP_ANY);
-
 //  Capture from the highest connected device number. This is a really
 //  bad solution, but it'll have to do for now. TODO Make this better
     for( i = 5; i >= 0; --i ) {
@@ -265,7 +263,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
     }
     if (capture == NULL) {
         fprintf( stderr, "ERROR: capture is NULL \n" );
-//        getchar();
         return EXIT_FAILURE;
     }
 
@@ -287,6 +284,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     cvCreateTrackbar("MinRad",  "configwindow", &minRadius, 100,    NULL);
     cvCreateTrackbar("MaxRad",  "configwindow", &maxRadius, 300,    NULL);
 
+    //Create the memory storage
     storage = cvCreateMemStorage(0);
 
     // void cvInitFont(font, font_face, hscale, vscale, shear=0, thickness=1, line_type=8 )
@@ -312,14 +310,19 @@ int run(const char *serverAddress, const int serverPort, char headless)
     cvSetMouseCallback("imagewindow", calibrateClick, (void*) &currentCalibrationPoint);
 
     gettimeofday(&oldTime, NULL);
+    
     // Show the image captured from the camera in the window and repeat
     while (1) {
+
+
 //PROFILING_PRO_STAMP(); //Uncomment this and comment all but the last PROFILING_* to profile main-loop
 
         // ------ Common actions
         cvClearMemStorage(storage);
 
         PROFILING_PRO_STAMP();
+
+        //Grab a fram from the camera
         grabbedImage = cvQueryFrame(capture);
         PROFILING_POST_STAMP("cvQueryFrame");
         if (grabbedImage == NULL) {
@@ -342,10 +345,16 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 imgThreshold = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvInRangeS(grabbedImage, cvScalar(DD_COLOR(min)), cvScalar(DD_COLOR(max)), imgThreshold);
 
+                //Mask away anything not in our calibration area
                 mask = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvZero(mask);
                 cvFillConvexPoly(mask, (CvPoint*) &DD_calibration, 4, cvScalar(RED), 1, 0);
                 cvAnd(imgThreshold, mask, imgThreshold, NULL);
+
+                //Reduce noise. 
+                //
+                //cvDilate could be used instead. I'm not sure which gives the best result.
+                cvErode(imgThreshold, imgThreshold, NULL, 2);
 
                 //Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
                 //should be fine as it is right now.
@@ -354,10 +363,14 @@ int run(const char *serverAddress, const int serverPort, char headless)
                  */
                 
                 PROFILING_PRO_STAMP();
+
+                //Find all dots TODO This currently is rather crappy. Switch method?
                 seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, dp+1, minDist+1, param1+1, param2+1, minRadius, maxRadius);
                 PROFILING_POST_STAMP("cvHoughCircles");
 
                 PROFILING_PRO_STAMP();
+
+                //Process all detected dots
                 for (i = 0; i < seq->total; i++){
                     // Get point
                     float *p = (float*)cvGetSeqElem(seq, i);
@@ -370,6 +383,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 }
                 PROFILING_POST_STAMP("Painting dots");
 
+                //Calculate framerate
                 gettimeofday(&time, NULL);
                 timeval_subtract(&diff, &time, &oldTime);
                 //		printf("Frames = %i\n", diff.tv_sec);
