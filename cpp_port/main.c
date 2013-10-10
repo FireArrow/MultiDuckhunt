@@ -398,8 +398,8 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 for( ; seq != 0; seq = seq->h_next ) {
 
                     CvRect rect = ((CvContour *)seq)->rect;
-                    int relCenterX = rect.width / 2;
-                    int relCenterY = rect.height / 2;
+                    float relCenterX = rect.width / 2;
+                    float relCenterY = rect.height / 2;
 
                     //Make sure the dot is big enough
                     if(relCenterX < minDotRadius || relCenterY < minDotRadius) {
@@ -409,12 +409,19 @@ int run(const char *serverAddress, const int serverPort, char headless)
                     CvScalar color = cvScalar( WHITE );
                     cvDrawContours( imgThreshold, seq, color, color, -1, CV_FILLED, 8, cvPoint(0,0));
 
-                    int absCenterX = rect.x + relCenterX;
-                    int absCenterY = rect.y + relCenterY;
+                    float absCenterX = rect.x + relCenterX;
+                    float absCenterY = rect.y + relCenterY;
 
                     ++detected_dots;
 
                     if(show) drawCircle( absCenterX, absCenterY, (relCenterX + relCenterY) / 2, grabbedImage);
+                    
+                    // Add detected points (if any) to to send queue
+                    //
+                    // This is a somewhat hacky way to add the current point to the queue.
+                    // As adbCenterY is defined directly after absCenterX it appear as such in memory.
+                    // That is why we can send the address of absCenterX to addPointsToSendQueue
+                    addPointToSendQueue( &absCenterX, queue ); 
 
                 }
 
