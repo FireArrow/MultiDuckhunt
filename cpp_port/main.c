@@ -9,11 +9,10 @@
 #include <netinet/in.h>
 #include "profiling.h"
 
-//These color calues are defined in RGB-A. Some functions in OpenCV uses BGR-A for some reason,
-//so the colors are messed up sometimes if these are used. Keep this in mind.
-#define RED 255, 0, 0, 0
+// Most functions in OpenCV uses BGR-A for some reason, so that's how these are defined
+#define RED 0, 0, 255, 0
 #define GREEN 0, 255, 0, 0
-#define BLUE 0, 0, 255, 0
+#define BLUE 255, 0, 0, 0
 #define WHITE 255, 255, 255, 0
 
 #define DEFAULT_SERVER_ADDRESS "127.0.0.1"
@@ -236,7 +235,7 @@ void paintCalibrationPoints(IplImage* grabbedImage) {
 
 int run(const char *serverAddress, const int serverPort, char headless)
 {
-    int i, sockfd, show = ~0, flip = 0;
+    int i, sockfd, show = ~0, flip = 0, noiceReduction = 0, done = 0;
     int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
     int minDotRadius = 1;
     int frames = 0, detected_dots;
@@ -279,7 +278,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     // Create a window in which the captured images will be presented
     cvNamedWindow("imagewindow", CV_WINDOW_AUTOSIZE);
 
-    // Create a window to hold the configuration sliders TODO This is kind of a hack. Make a better solution
+    // Create a window to hold the configuration sliders and the detection frame TODO This is kind of a hack. Make a better solution
     cvNamedWindow("configwindow", CV_WINDOW_AUTOSIZE);
 
     // Create sliders to adjust the lower color boundry, param 1 and 2 for the circle detector (whatever they do?)
@@ -327,7 +326,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     gettimeofday(&oldTime, NULL);
     
     // Show the image captured from the camera in the window and repeat
-    while (1) {
+    while (!done) {
 
 //PROFILING_PRO_STAMP(); //Uncomment this and comment all but the last PROFILING_* to profile main-loop
 
@@ -363,13 +362,17 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 //Mask away anything not in our calibration area
                 mask = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvZero(mask);
-                cvFillConvexPoly(mask, (CvPoint*) &DD_calibration, 4, cvScalar(RED), 1, 0);
+                cvFillConvexPoly(mask, (CvPoint*) &DD_calibration, 4, cvScalar(WHITE), 1, 0);
                 cvAnd(imgThreshold, mask, imgThreshold, NULL);
 
-                //Reduce noise. 
-                //
-                //cvDilate could be used instead. I'm not sure which gives the best result.
-                cvDilate(imgThreshold, imgThreshold, NULL, 2);
+                // Reduce noise. 
+                // Erode is kind of floor() of pixels, dilate is kind of ceil()
+                // I'm not sure which gives the best result.
+                switch(noiceReduction) {
+                    case 0: break; //No noice reduction at all
+                    case 1: cvErode(imgThreshold, imgThreshold, NULL, 2); break;
+                    case 2: cvDilate(imgThreshold, imgThreshold, NULL, 2); break;
+                }
 
                 //Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
                 //should be fine as it is right now.
@@ -384,6 +387,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 
                 seq = 0;
                 cvFindContours( imgThreshold, storage, &seq, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
+                cvZero(imgThreshold);
 
                 PROFILING_POST_STAMP("cvHoughCircles");
 
@@ -392,27 +396,25 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 //Process all detected dots
                 
                 for( ; seq != 0; seq = seq->h_next ) {
-                    //double dotArea = cvContourArea(seq, CV_WHOLE_SEQ, 0);
-
-                    //Make sure the dot is big enough
-                    //if(dotArea < minDotArea) {
-                    //    continue;
-                    //}
 
                     CvRect rect = ((CvContour *)seq)->rect;
                     int relCenterX = rect.width / 2;
                     int relCenterY = rect.height / 2;
 
+                    //Make sure the dot is big enough
                     if(relCenterX < minDotRadius || relCenterY < minDotRadius) {
                         continue;
                     }
+
+                    CvScalar color = cvScalar( WHITE );
+                    cvDrawContours( imgThreshold, seq, color, color, -1, CV_FILLED, 8, cvPoint(0,0));
 
                     int absCenterX = rect.x + relCenterX;
                     int absCenterY = rect.y + relCenterY;
 
                     ++detected_dots;
 
-                    if(show) drawCircle( absCenterX, absCenterY, relCenterX, grabbedImage);
+                    if(show) drawCircle( absCenterX, absCenterY, (relCenterX + relCenterY) / 2, grabbedImage);
 
                 }
 
@@ -482,13 +484,17 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
         //Add one to the frame rate counter
         frames++;
+
         //If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
         //remove higher bits using AND operator
         i = (cvWaitKey(10) & 0xff);
-        if (i == 'v') show = ~show;
-        if (i == 'r') { state = CALIBRATE; currentCalibrationPoint = TOP_LEFT; }
-        if (i == 'f') flip = ~flip;
-        if (i == 27) break;
+        switch(i) {
+            case 'v': show = ~show; break; //Toggles updating of the image. Can be useful for performance of slower machines... Or as frame freeze
+            case 'r': state = CALIBRATE; currentCalibrationPoint = TOP_LEFT; break; //Starts calibration. Will return to dot detection once all four calibration points are set
+            case 'f': flip = ~flip; break; //Toggles flipping of the image
+            case 'n': noiceReduction = (noiceReduction + 1) % 3; break; //Cycles noice reduction algorithm
+            case  27: done = 1; break; //ESC. Kills the whole thing (in a nice and controlled manner)
+        }
 
 //PROFILING_POST_STAMP("Main loop");
     } //End of main while-loop
