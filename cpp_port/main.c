@@ -9,9 +9,11 @@
 #include <netinet/in.h>
 #include "profiling.h"
 
+//These color calues are defined in RGB-A. Some functions in OpenCV uses BGR-A for some reason,
+//so the colors are messed up sometimes if these are used. Keep this in mind.
 #define RED 255, 0, 0, 0
-#define GREEN 0, 0, 255, 0
-#define BLUE 0, 255, 0, 0
+#define GREEN 0, 255, 0, 0
+#define BLUE 0, 0, 255, 0
 #define WHITE 255, 255, 255, 0
 
 #define DEFAULT_SERVER_ADDRESS "127.0.0.1"
@@ -236,10 +238,10 @@ int run(const char *serverAddress, const int serverPort, char headless)
 {
     int i, sockfd, show = ~0, flip = 0;
     int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
-    int minDotRadius = 10;
+    int minDotRadius = 1;
     int frames = 0, detected_dots;
     int returnValue = EXIT_SUCCESS;
-    Color min = {250, 120, 120, 0};
+    Color min = {240, 180, 180, 0};
     Color max = {255, 255, 255, 0};
     CvCapture *capture;
     CvMemStorage *storage;
