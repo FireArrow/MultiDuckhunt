@@ -136,7 +136,7 @@ void sendQueue(int sockfd, SendQueue *q)
     // Skip first entry
     q = q->next;
     while (q != NULL) { //TODO buffer overflow here? segfaults when sending very many dots
-        ret = snprintf(&buf[len], sizeof(buf) - strlen(buf), "%.2f,%f ", q->point[0], q->point[1]);
+        ret = snprintf(&buf[len], sizeof(buf) - strlen(buf), "%.2f,%.2f ", q->point[0], q->point[1]);
         if (ret < 0) {
             printf("Foo\n");
             break;
@@ -145,6 +145,7 @@ void sendQueue(int sockfd, SendQueue *q)
 
         q = q->next;
     }
+    if(len > 0) buf[--len] = '\0'; //Remove the trailing space
     //	printf("Sending: \"%s\"\n", buf);
     send(sockfd, buf, len, 0);
 }
@@ -409,19 +410,18 @@ int run(const char *serverAddress, const int serverPort, char headless)
                     CvScalar color = cvScalar( WHITE );
                     cvDrawContours( imgThreshold, seq, color, color, -1, CV_FILLED, 8, cvPoint(0,0));
 
-                    float absCenterX = rect.x + relCenterX;
-                    float absCenterY = rect.y + relCenterY;
+                    float absCenter[] = { rect.x + relCenterX, rect.y + relCenterY };
 
                     ++detected_dots;
 
-                    if(show) drawCircle( absCenterX, absCenterY, (relCenterX + relCenterY) / 2, grabbedImage);
+                    if(show) drawCircle( absCenter[0], absCenter[1], (relCenterX + relCenterY) / 2, grabbedImage);
                     
                     // Add detected points (if any) to to send queue
                     //
                     // This is a somewhat hacky way to add the current point to the queue.
                     // As adbCenterY is defined directly after absCenterX it appear as such in memory.
                     // That is why we can send the address of absCenterX to addPointsToSendQueue
-                    addPointToSendQueue( &absCenterX, queue ); 
+                    addPointToSendQueue( absCenter, queue ); 
 
                 }
 
@@ -451,10 +451,10 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 }
 
                 //Send to dots detected this frame to the server
-//                PROFILING_PRO_STAMP();
-//                sendQueue(sockfd, queue);
-//                clearSendQueue(queue);
-//                PROFILING_POST_STAMP("Sending dots");
+                PROFILING_PRO_STAMP();
+                sendQueue(sockfd, queue);
+                clearSendQueue(queue);
+                PROFILING_POST_STAMP("Sending dots");
 
                 break; //End of GRAB_DOTS
 
