@@ -56,11 +56,13 @@ struct {
 
 static char state = GRAB_DOTS;
 
+// The definition of a single element in the send queue
 typedef struct SendQueue {
     float point[2]; // x and y
     struct SendQueue *next;
 } SendQueue;
 
+// Starts up the network part
 int initNetwork(const char *serverAddress, const int serverPort)
 {
     int sockfd;
@@ -106,6 +108,7 @@ int initNetwork(const char *serverAddress, const int serverPort)
     return sockfd;
 }
 
+// Sets up the send queue
 SendQueue *initSendQueue()
 {
     SendQueue *q = malloc(sizeof(SendQueue));
@@ -113,6 +116,7 @@ SendQueue *initSendQueue()
     return q;
 }
 
+// Adds a single point to the send queue
 void addPointToSendQueue(const float p[2], SendQueue *q)
 {
     SendQueue *newEntry = malloc(sizeof(SendQueue));
@@ -127,6 +131,7 @@ void addPointToSendQueue(const float p[2], SendQueue *q)
     q->next = newEntry;
 }
 
+// Sends the send queue over the network in text format "x.xx,y.yy x.xx,y.yy"
 void sendQueue(int sockfd, SendQueue *q)
 {
     int ret, len = 0;
@@ -150,6 +155,8 @@ void sendQueue(int sockfd, SendQueue *q)
     send(sockfd, buf, len, 0);
 }
 
+// Removes all elements from the send queue, freeing up the memory allocated to them
+// Will not destroy the actual queue. New elements can still be added after running this
 void clearSendQueue(SendQueue *q)
 {
     SendQueue *toBeFreed;
@@ -165,21 +172,15 @@ void clearSendQueue(SendQueue *q)
     first->next = NULL;
 }
 
+// Destroys the send queue, freeing up all memory allocated to it.
+// Not to be confused with clearSendQueue()
 void destroySendQueue(SendQueue *q)
 {
     clearSendQueue(q);
     free(q);
 }
 
-void paintCircle(const float *p, IplImage *target)
-{
-    CvPoint center = {cvRound(p[0]), cvRound(p[1]) };
-    int radius = cvRound(p[2]);
-
-    cvCircle(target, center, 2, cvScalar(GREEN), -1, 8, 0);
-    cvCircle(target, center, radius, cvScalar(BLUE), 1, 8, 0);
-}
-
+// Draws a circle on the specified x,y with specified radius on target image
 void drawCircle(int x, int y, int radius, IplImage *target) {
     CvPoint center = { x, y };
 
@@ -197,13 +198,14 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
     return (diff<0);
 }
 
-
+// The callback function for a click while in calibration mode
+// Sets the state to GRAB_DOTS after the last point is calibrated
 void calibrateClick(int event, int x, int y, int flags, void* param) 
 {
     int* currentCalibrationPoint = (int *) param;
     if(state == CALIBRATE) {
         if(event == CV_EVENT_LBUTTONDOWN) {
-            if(*currentCalibrationPoint <= BOTTOM_LEFT) { // This should be a unneccessaru clause
+            if(*currentCalibrationPoint <= BOTTOM_LEFT) { // This should be a unneccessary clause
 
                 printf("Calibrating point %d\n", *currentCalibrationPoint);
                 CvPoint p = { x, y };
@@ -222,6 +224,7 @@ void calibrateClick(int event, int x, int y, int flags, void* param)
     }
 }
 
+// Paints the edges of the calibration area
 void paintCalibrationPoints(IplImage* grabbedImage) {
     cvCircle(grabbedImage, DD_calibration.topLeft, 2, cvScalar(BLUE), -1, 8, 0); 
     cvLine(grabbedImage, DD_calibration.topLeft, DD_calibration.topRight, cvScalar(GREEN), 1, 8, 0);
@@ -233,7 +236,7 @@ void paintCalibrationPoints(IplImage* grabbedImage) {
     cvLine(grabbedImage, DD_calibration.bottomLeft, DD_calibration.topLeft, cvScalar(GREEN), 1, 8, 0);
 }
 
-
+// Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options of possibly a config file first though
 int run(const char *serverAddress, const int serverPort, char headless)
 {
     int i, sockfd, show = ~0, flip = 0, noiceReduction = 0, done = 0;
@@ -290,15 +293,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
     //Create sliters for the contour based dot detection
     cvCreateTrackbar("Min area","configwindow", &minDotRadius,255,    NULL);
 
-    /* //Create sliders for all cvHoughCircles parameters
-    cvCreateTrackbar("DP",      "configwindow", &dp,        10,     NULL); // I have no idea what this parameter does =S
-    cvCreateTrackbar("MinDist", "configwindow", &minDist,   100,    NULL);
-    cvCreateTrackbar("Param1",  "configwindow", &param1,    50,     NULL); // Nor this...
-    cvCreateTrackbar("Param2",  "configwindow", &param2,    50,     NULL); // nor this.
-    cvCreateTrackbar("MinRad",  "configwindow", &minRadius, 100,    NULL);
-    cvCreateTrackbar("MaxRad",  "configwindow", &maxRadius, 300,    NULL);
-    */
-
     //Create the memory storage
     storage = cvCreateMemStorage(0);
 
@@ -329,7 +323,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     // Show the image captured from the camera in the window and repeat
     while (!done) {
 
-//PROFILING_PRO_STAMP(); //Uncomment this and comment all but the last PROFILING_* to profile main-loop
+//PROFILING_PRO_STAMP(); //Uncomment this and the one in the end of the while-loop, and comment all but the last PROFILING_* to profile main-loop
 
         // ------ Common actions
         cvClearMemStorage(storage);
@@ -377,25 +371,17 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
                 //Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
                 //should be fine as it is right now.
-                /*
-                 * image, circleStorage, method, double dp,	double minDist,	double param1, double param2, int minRadius, int maxRadius
-                 */
-                
                 PROFILING_PRO_STAMP();
 
-                //Find all dots TODO This currently is rather crappy. Switch method?
-                //seq = cvHoughCircles(imgThreshold, storage, CV_HOUGH_GRADIENT, dp+1, minDist+1, param1+1, param2+1, minRadius, maxRadius);
-                
                 seq = 0;
                 cvFindContours( imgThreshold, storage, &seq, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
                 cvZero(imgThreshold);
 
-                PROFILING_POST_STAMP("cvHoughCircles");
+                PROFILING_POST_STAMP("Dot detection");
 
                 PROFILING_PRO_STAMP();
 
                 //Process all detected dots
-                
                 for( ; seq != 0; seq = seq->h_next ) {
 
                     CvRect rect = ((CvContour *)seq)->rect;
@@ -417,26 +403,8 @@ int run(const char *serverAddress, const int serverPort, char headless)
                     if(show) drawCircle( absCenter[0], absCenter[1], (relCenterX + relCenterY) / 2, grabbedImage);
                     
                     // Add detected points (if any) to to send queue
-                    //
-                    // This is a somewhat hacky way to add the current point to the queue.
-                    // As adbCenterY is defined directly after absCenterX it appear as such in memory.
-                    // That is why we can send the address of absCenterX to addPointsToSendQueue
                     addPointToSendQueue( absCenter, queue ); 
-
                 }
-
-                /*
-                for (i = 0; i < seq->total; i++){
-                    // Get point
-                    float *p = (float*)cvGetSeqElem(seq, i);
-
-                    //Draw current circle to the original image
-                    if (show) paintCircle(p, grabbedImage);
-
-                    //Buffer current circle to be sent to the server
-                    addPointToSendQueue(p, queue);
-                }
-                */
 
                 PROFILING_POST_STAMP("Painting dots");
 
@@ -462,7 +430,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
             case CALIBRATE:
 
                 //One day we might do something here
-
                 break; //End of CALIBRATE
         }
 
@@ -471,7 +438,6 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
         //Print some statistics to the image
         if (show) {
-            //snprintf(strbuf, sizeof(strbuf), "Dots: %i", seq == NULL ? 0 : seq->total); //Print number of detected dots to the screen. Notice the hack to avoid segfaults when no dots are detected
             snprintf(strbuf, sizeof(strbuf), "Dots: %i", detected_dots); //Print number of detected dots to the screen
             cvPutText(grabbedImage, strbuf, cvPoint(10, 20), &font, cvScalar(WHITE));
             snprintf(strbuf, sizeof(strbuf), "FPS: %.1f", lastKnownFPS);
