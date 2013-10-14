@@ -3,6 +3,10 @@ var debug_mode = false;
 // latest state of detected light (format: 0.5,22.388 33.21,9993 ...)
 var current_state = "";
 
+var WebSocketServer = require("ws").Server
+  , wss = new WebSocketServer({port: 9999})
+var ws_clients = [];
+
 // Listen for udp
 var dgram = require("dgram");
 var server = dgram.createSocket("udp4");
@@ -12,16 +16,40 @@ server.on( "listening",
 		if(debug_mode)
 		console.log("listening for udp datagrams on " + address.address + ":" + address.port);
 });
-server.on("message",
-	function (msg, rinfo) {
-	if(debug_mode)
-		console.log("server got: " + msg + " from " + rinfo.address + ":" + rinfo.port);
-    if(msg != "ndd")
-	    current_state = ""+msg;
-    else
-        current_state = "";
-});
+console.log(server);
+
+function stdrecv() {
+	server.on("message",
+		function (msg, rinfo) {
+		if(debug_mode)
+			console.log("server got: " + msg + " from " + rinfo.address + ":" + rinfo.port);
+			current_state = ""+msg;
+	});
+}
 server.bind(udp_listen_port);
+
+wss.on("connection", function(ws) {
+	console.log("connection from: ", ws.upgradeReq.headers.origin);
+	ws.on("close", function() {
+		stdrecv();
+	});
+	server.on("message", function(msg, rinfo) {
+		if(msg != "ndd"){
+			current_state = ""+msg;
+			var dots = [];
+			var listofcoordpairs = current_state.split( " " );
+			for(var key in listofcoordpairs) {
+				var coords = listofcoordpairs[key].split(",");
+				dots.push({x: parseFloat(coords[0]), y:parseFloat(coords[1])});
+			}
+			ws.send(JSON.stringify(dots), function(err){ if(err != null) stdrecv();});
+		} else {
+			current_state = "";
+			ws.send("[]", function(err){ if(err != null) stdrecv();});
+		}
+	});
+});
+
 
 // web server paste
 var http = require("http"),
