@@ -16,7 +16,10 @@ server.on("message",
 	function (msg, rinfo) {
 	if(debug_mode)
 		console.log("server got: " + msg + " from " + rinfo.address + ":" + rinfo.port);
-		current_state = ""+msg;
+    if(msg != "ndd")
+	    current_state = ""+msg;
+    else
+        current_state = "";
 });
 server.bind(udp_listen_port);
 

@@ -132,6 +132,7 @@ void addPointToSendQueue(const float p[2], SendQueue *q)
 }
 
 // Sends the send queue over the network in text format "x.xx,y.yy x.xx,y.yy"
+// Sends "ndd" if there are no dots detected
 void sendQueue(int sockfd, SendQueue *q)
 {
     int ret, len = 0;
@@ -150,7 +151,17 @@ void sendQueue(int sockfd, SendQueue *q)
 
         q = q->next;
     }
-    if(len > 0) buf[--len] = '\0'; //Remove the trailing space
+    if(len > 0) {
+        buf[--len] = '\0'; //Remove the trailing space
+    }
+    else {
+        //If no dots are detected we send "ndd", No Dots Detected. Sending "" didn't seem to work.
+        buf[0] = 'n';
+        buf[1] = 'd';
+        buf[2] = 'd';
+        buf[3] = '\0';
+        len = 3;
+    }
     //	printf("Sending: \"%s\"\n", buf);
     send(sockfd, buf, len, 0);
 }
@@ -239,7 +250,7 @@ void paintCalibrationPoints(IplImage* grabbedImage) {
 // Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options of possibly a config file first though
 int run(const char *serverAddress, const int serverPort, char headless)
 {
-    int i, sockfd, show = ~0, flip = 0, noiceReduction = 0, done = 0;
+    int i, sockfd, show = ~0, flip = 0, vflip = 0, noiceReduction = 0, done = 0;
     int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
     int minDotRadius = 1;
     int frames = 0, detected_dots;
@@ -344,6 +355,9 @@ int run(const char *serverAddress, const int serverPort, char headless)
         //Flip images to act as a mirror. 
         if (show && flip) {
             cvFlip(grabbedImage, grabbedImage, 1);
+        }
+        if(show && vflip) {
+            cvFlip(grabbedImage, grabbedImage, 0);
         }
 
         // ------ State based actions
@@ -465,6 +479,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
             case 'v': show = ~show; break; //Toggles updating of the image. Can be useful for performance of slower machines... Or as frame freeze
             case 'r': state = CALIBRATE; currentCalibrationPoint = TOP_LEFT; break; //Starts calibration. Will return to dot detection once all four calibration points are set
             case 'f': flip = ~flip; break; //Toggles flipping of the image
+            case 'g': vflip = ~vflip; break; //Toggles flipping of the image
             case 'n': noiceReduction = (noiceReduction + 1) % 3; break; //Cycles noice reduction algorithm
             case  27: done = 1; break; //ESC. Kills the whole thing (in a nice and controlled manner)
         }

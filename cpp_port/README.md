@@ -11,6 +11,7 @@ Keys
 * ESC - close the program
 * r - recalibrate the bounding area
 * f - flip the image horizontally
+* g - flip the image vertically
 * v - stop updating the image
 * n - cycle noice reduction mode
 
