@@ -30,7 +30,7 @@ Depends on http://nodejs.org
 Reads udp packets from image analyzer and delivers static web content and the image data from the analyzers on request.
 
 * Download nodejs from above url, install, start nodejs/start.bat
-
+* Download websocket nodejs module ( npm install ws )
 
 
 Game
