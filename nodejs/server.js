@@ -71,12 +71,56 @@ var requesthandler = function( request, response ) {
 		response.end();
 		return;
 	}
+	else if( pathname === "/index.html" || pathname === "/" ) {
+		//Generate an index.html with a list of all available pages
+		console.log("Generating index.html");
+		var availablePages = "";
+		fs.readdir("../js", function(err, files) {
+			//Handle error
+			if(err) {
+				console.log("500: " + pathname);
+				response.writeHead(500, {"Content-Type": "text/plain"});
+				response.write(err + "\n");
+				response.end();
+				return;
+			}
+			
+			//List all available HTML pages
+			for(i in files) {
+				var filenameParts = files[i].split(".");
+				console.log(filenameParts);
+				if(filenameParts.length == 2 && filenameParts[1] == "html") {
+					availablePages += '<a href=/' + filenameParts[0] + "." + filenameParts[1] + '><p class="greenlink">' + filenameParts[0] + '</p></a>';
+				}
+			}
+			if(availablePages.length == 0) {
+				availablePages = "No pages found";
+			}
+			response.writeHead(200);
+			
+			//Generate the actual page
+			//TODO Create a header and a footer page for more dynamic generation
+			response.write(
+			'<html>\n' +
+			'<head>\n' +
+			'	<link rel="stylesheet" type="text/css" href="style.css">\n' +
+			'	<title>Pew pew lazors</title>\n' +
+			'</head>\n' +
+			'<body bgcolor="#000000">\n' +
+			'	<h1>Available pages</h1>\n' +
+			'	<div id="pages" class="greenbox">' + availablePages + '</div>\n' +
+			'</body>\n' +
+			'</html>\n'
+			, "binary");
+			response.end();
+		});
+	}
 	else
 	{
-		
+		console.log("Serving file " + pathname);
 		var uri = "../js" + pathname;
 		var filename = path.join(process.cwd(), uri);
-		path.exists(filename, function(exists) {
+		fs.exists(filename, function(exists) {
 			if(!exists) {
 			console.log("404: "+pathname);
 				response.writeHead(404, {"Content-Type": "text/plain"});

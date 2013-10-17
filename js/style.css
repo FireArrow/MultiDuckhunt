@@ -1,0 +1,47 @@
+@keyframes lightup {
+	0%	{box-shadow:0px 0px 0px 0px #00EE00;}
+	25%	{box-shadow:0px 0px 2px 1px #00EE00;}
+	50%	{box-shadow:0px 0px 4px 2px #00EE00;}
+	75%	{box-shadow:0px 0px 7px 2px #00EE00;}
+	100%{box-shadow:0px 0px 10px 2px #00EE00;}
+}
+
+@-webkit-keyframes lightup { /* Safari and Chrome */
+	0%	{box-shadow:0px 0px 0px 0px #00EE00;}
+	25%	{box-shadow:0px 0px 2px 1px #00EE00;}
+	50%	{box-shadow:0px 0px 4px 2px #00EE00;}
+	75%	{box-shadow:0px 0px 7px 2px #00EE00;}
+	100%{box-shadow:0px 0px 10px 2px #00EE00;}
+}
+
+body {
+	background-color:black;
+	color:#00EE00;
+	font-family:Arial, Helvetica, sans-serif
+}
+div.greenbox {
+	text-align:center;
+	width:300px;
+	padding-left:20px;
+	padding-right:20px;
+	border:1px solid #00EE00;
+	border-radius:10px;
+}
+p{
+	padding:5px;
+	margin-right:0px;
+	border:1px solid #00EE00;
+	border-radius:4px;
+}
+a:link,a:visited{
+	color:#00EE00;
+	text-decoration:none;
+}
+p:hover{
+	
+	animation:lightup 0.05s;
+	-webkit-animation:lightup 0.05s;
+	box-shadow:0px 0px 10px 2px #00EE00;
+	
+	/*background-color:#335533;*/
+}
