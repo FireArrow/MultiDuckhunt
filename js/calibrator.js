@@ -9,23 +9,43 @@ var calibrateAction = function( state, image, finished )
 	var delegate = function( context, width, height, mark, keys ) {
 		
 		// depending on which state the calibration sequence is in, we either
-		if( c.getState() === "show1" )
+		if( c.getState() === "topleft" )
 		{
 			// draw an image in the top left corner
 			context.drawImage(image, -20, -20,40,40);
 			if( keys.length > 0 )
 			{
-				c.reportFirst( width, height );
+				c.reportTopLeft( width, height );
 				transition_mark = mark;
 			}
 		}
-		else if( c.getState() === "show2" )
+		else if( c.getState() === "topright" )
+		{
+			// draw an image in the top right corner
+			context.drawImage(image, width-20, -20,40,40);
+			if( keys.length > 0 && transition_mark + 1000 < mark )
+			{
+				c.reportTopRight();
+				transition_mark = mark;
+			}
+		}
+		else if( c.getState() === "bottomright" )
 		{
 			// draw an image in the bottom right corner
 			context.drawImage(image, width-20, height-20,40,40);
 			if( keys.length > 0 && transition_mark + 1000 < mark )
 			{
-				c.reportSecond();
+				c.reportBottomRight();
+				transition_mark = mark;
+			}
+		}
+		else if( c.getState() === "bottomleft" )
+		{
+			// draw an image in the bottom left corner
+			context.drawImage(image, 20, height-20,40,40);
+			if( keys.length > 0 && transition_mark + 1000 < mark )
+			{
+				c.reportBottomLeft();
 			}
 		}
 		else if( c.getState() === "ready" )
@@ -42,55 +62,102 @@ var calibrateAction = function( state, image, finished )
 
 var makeCalibration = function( comms )
 {
-	var _state = "show1"; // other possible states are [show2, ready]
+	var _state = "topleft"; // other possible states are [topright, bottomright, bottomleft, ready]
 	var _current_coords = {x:0,y:0};
+
+    // The calibration works by taking the mean of two linear transformations, one for each diagonal.
 	
-	var base_report = undefined;
-	var scale_report = undefined;
+	var calPointTopLeft = undefined; //Top left bottom right base
+    var calPointBottomRight = undefined; //Top left bottom right scale
+    var calPointTopRight = undefined; //Top right bottom left base
+	var calPointBottomLeft = undefined; //Top right bottom left scale
 	
 	return {
-		reportFirst: function(current_width,current_height){
+		reportTopLeft: function(current_width,current_height){
 			//user has pressed key signaling that the current state reported by the server matches the
 			// mark drawn on the screen.
 			var coords = comms();
 			if( coords.length > 0 ) // guard for badness from server
 			{
-				_current_coords = {x:current_width,y:current_height}; // save screen size so we know where to print second mark
-				_state = "show2";
-				base_report = coords[0];
+				_current_coords = {x:current_width,y:current_height}; // save screen size so we know where to print the other marks
+				_state = "topright";
+				calPointTopLeft = coords[0];
 			}
 		},
-		reportSecond: function(){
+		reportTopRight: function(){
+			// user signals that second mark matches
+			var coords = comms();
+			if( coords.length > 0 )
+			{
+				_state = "bottomright";
+				calPointTopRight = coords[0];
+			}
+		},
+		reportBottomRight: function(){
+			// user signals that second mark matches
+			var coords = comms();
+			if( coords.length > 0 )
+			{
+				_state = "bottomleft";
+				calPointBottomRight = coords[0];
+			}
+		},
+		reportBottomLeft: function(){
 			// user signals that second mark matches
 			var coords = comms();
 			if( coords.length > 0 )
 			{
 				_state = "ready";
-				scale_report = coords[0];
+				calPointBottomLeft = coords[0];
 			}
 		},
+
 		getState: function(){
 			return _state;
 		},
+
+        
+
 		transform: function(coords){
 			
-		// this function transforms coords from the scale they are imported from the imaging server
-		// to on screen window relative coordinates.
-		
-		// There is testing done on this. Check test.html.
-		
-		//transform x component linearily onto screen based on the two calibration reports
-		var baseX = coords.x - base_report.x;
-		var deltaX = scale_report.x - base_report.x;
-		var x = ( baseX / deltaX ) * _current_coords.x;
-		
-		// transform y coordinate in the same way
-		var baseY = coords.y - base_report.y;
-		var deltaY = scale_report.y - base_report.y;
-		var y = ( baseY / deltaY ) * _current_coords.y;
+    		// This function transforms coords from the scale they are imported from the imaging server
+    		// to on screen window relative coordinates.
+            //
+            // To account for the camera not being perfectly aligned with the screen we do two
+            // linear transformations, one over each diagonal, and return the mean of the two.
 
-			return { x: x, y: y };
+    		// There is testing done on this. Check test.html. 
+            // TODO Update test to match new calibration algorithm
+
+    		// Transform x component linearily onto screen based on the two calibration reports
+            // Top left corner to bottom right.
+    		var base_TLBR_X = coords.x - calPointTopLeft.x;
+    		var delta_TLBR_X = calPointBottomRight.x - calPointTopLeft.x;
+    		var x1 = ( base_TLBR_X / delta_TLBR_X ) * _current_coords.x;
+
+    		// transform y coordinate in the same way
+    		var base_TLBR_Y = coords.y - calPointTopLeft.y;
+    		var delta_TLBR_Y = calPointBottomRight.y - calPointTopLeft.y;
+    		var y1 = ( base_TLBR_Y / delta_TLBR_Y ) * _current_coords.y;
+
+            //Everything gets a bit upside-down in top right bottom left
+            //but just be careful and it'll be ok
+            //Top right corner to bottom left.
+    		var base_TRBL_X = coords.x - calPointBottomLeft.x;
+    		var delta_TRBL_X = calPointTopRight.x - calPointBottomLeft.x;
+    		var x2 = ( base_TRBL_X / delta_TRBL_X ) * _current_coords.x;
+
+    		// transform y coordinate in the same way
+    		var base_TRBL_Y = coords.y - calPointTopRight.y;
+    		var delta_TRBL_Y = calPointBottomLeft.y - calPointTopRight.y;
+    		var y2 = ( base_TRBL_Y / delta_TRBL_Y ) * _current_coords.y;
+
+            var meanX = ( x1 + x2 ) / 2;
+            var meanY = ( y1 + y2 ) / 2;
+
+			return { x: meanX, y: meanY };
 		},
+
 		getAll: function(){
 			// this is a helper function that simply gets the latest reported coords from the server and transforms them in bulk
 			var serverCoords = comms();
