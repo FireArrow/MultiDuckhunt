@@ -33,8 +33,10 @@ wss.on("connection", function(ws) {
 	ws.on("close", function() {
 		stdrecv();
 	});
+    var sentEmpty = false;
 	server.on("message", function(msg, rinfo) {
 		if(msg != "ndd"){
+            sentEmpty = false;
 			current_state = ""+msg;
 			var dots = [];
 			var listofcoordpairs = current_state.split( " " );
@@ -44,8 +46,11 @@ wss.on("connection", function(ws) {
 			}
 			ws.send(JSON.stringify(dots), function(err){ if(err != null) stdrecv();});
 		} else {
-			current_state = "";
-			ws.send("[]", function(err){ if(err != null) stdrecv();});
+            if( !sentEmpty ) {
+			    current_state = "";
+			    ws.send("[]", function(err){ if(err != null) stdrecv();});
+                sentEmpty = true;
+            }
 		}
 	});
 });
