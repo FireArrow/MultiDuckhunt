@@ -20,7 +20,7 @@
 
 // States
 #define GRAB_DOTS 1
-#define CALIBRATE 2
+#define SELECT_MASK 2
 
 // Cornors of the calibrator
 //
@@ -52,7 +52,7 @@ struct {
     CvPoint topRight;
     CvPoint bottomRight;
     CvPoint bottomLeft;
-} DD_calibration;
+} DD_mask;
 
 static char state = GRAB_DOTS;
 
@@ -214,17 +214,17 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
 void calibrateClick(int event, int x, int y, int flags, void* param) 
 {
     int* currentCalibrationPoint = (int *) param;
-    if(state == CALIBRATE) {
+    if(state == SELECT_MASK) {
         if(event == CV_EVENT_LBUTTONDOWN) {
             if(*currentCalibrationPoint <= BOTTOM_LEFT) { // This should be a unneccessary clause
 
                 printf("Calibrating point %d\n", *currentCalibrationPoint);
                 CvPoint p = { x, y };
                 switch(*currentCalibrationPoint) {
-                    case TOP_LEFT:      DD_calibration.topLeft      = p; break;
-                    case TOP_RIGHT:     DD_calibration.topRight     = p; break;
-                    case BOTTOM_RIGHT:  DD_calibration.bottomRight  = p; break;
-                    case BOTTOM_LEFT:   DD_calibration.bottomLeft   = p; break;
+                    case TOP_LEFT:      DD_mask.topLeft      = p; break;
+                    case TOP_RIGHT:     DD_mask.topRight     = p; break;
+                    case BOTTOM_RIGHT:  DD_mask.bottomRight  = p; break;
+                    case BOTTOM_LEFT:   DD_mask.bottomLeft   = p; break;
                 }
                 ++(*currentCalibrationPoint);
                 if(*currentCalibrationPoint > BOTTOM_LEFT) {
@@ -236,15 +236,15 @@ void calibrateClick(int event, int x, int y, int flags, void* param)
 }
 
 // Paints the edges of the calibration area
-void paintCalibrationPoints(IplImage* grabbedImage) {
-    cvCircle(grabbedImage, DD_calibration.topLeft, 2, cvScalar(BLUE), -1, 8, 0); 
-    cvLine(grabbedImage, DD_calibration.topLeft, DD_calibration.topRight, cvScalar(GREEN), 1, 8, 0);
-    cvCircle(grabbedImage, DD_calibration.topRight, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_calibration.topRight, DD_calibration.bottomRight, cvScalar(GREEN), 1, 8, 0);
-    cvCircle(grabbedImage, DD_calibration.bottomLeft, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_calibration.bottomRight, DD_calibration.bottomLeft, cvScalar(GREEN), 1, 8, 0);
-    cvCircle(grabbedImage, DD_calibration.bottomRight, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_calibration.bottomLeft, DD_calibration.topLeft, cvScalar(GREEN), 1, 8, 0);
+void paintOverlayPoints(IplImage* grabbedImage) {
+    cvCircle(grabbedImage, DD_mask.topLeft, 2, cvScalar(BLUE), -1, 8, 0); 
+    cvLine(grabbedImage, DD_mask.topLeft, DD_mask.topRight, cvScalar(GREEN), 1, 8, 0);
+    cvCircle(grabbedImage, DD_mask.topRight, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_mask.topRight, DD_mask.bottomRight, cvScalar(GREEN), 1, 8, 0);
+    cvCircle(grabbedImage, DD_mask.bottomLeft, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_mask.bottomRight, DD_mask.bottomLeft, cvScalar(GREEN), 1, 8, 0);
+    cvCircle(grabbedImage, DD_mask.bottomRight, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_mask.bottomLeft, DD_mask.topLeft, cvScalar(GREEN), 1, 8, 0);
 }
 
 // Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options of possibly a config file first though
@@ -279,7 +279,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
 
 //  Capture from the highest connected device number. This is a really
 //  bad solution, but it'll have to do for now. TODO Make this better
-    for( i = 5; i >= 0; --i ) {
+    for( i = 0; i < 5; ++i ) {
         capture = cvCaptureFromCAM(i);    
         if (capture != NULL) {
             break;
@@ -314,17 +314,17 @@ int run(const char *serverAddress, const int serverPort, char headless)
     grabbedImage = cvQueryFrame(capture);
 
     // Set calibration defaults TODO load from file?
-    DD_calibration.topLeft.x = 0;  
-    DD_calibration.topLeft.y = 0;
+    DD_mask.topLeft.x = 0;  
+    DD_mask.topLeft.y = 0;
 
-    DD_calibration.topRight.x = grabbedImage->width-1;
-    DD_calibration.topRight.y = 0;
+    DD_mask.topRight.x = grabbedImage->width-1;
+    DD_mask.topRight.y = 0;
 
-    DD_calibration.bottomLeft.x = 0;
-    DD_calibration.bottomLeft.y = grabbedImage->height-1;
+    DD_mask.bottomLeft.x = 0;
+    DD_mask.bottomLeft.y = grabbedImage->height-1;
 
-    DD_calibration.bottomRight.x = grabbedImage->width-1;
-    DD_calibration.bottomRight.y = grabbedImage->height-1;
+    DD_mask.bottomRight.x = grabbedImage->width-1;
+    DD_mask.bottomRight.y = grabbedImage->height-1;
 
     // Set callback function for mouse clicks
     cvSetMouseCallback("imagewindow", calibrateClick, (void*) &currentCalibrationPoint);
@@ -334,7 +334,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     // Show the image captured from the camera in the window and repeat
     while (!done) {
 
-//PROFILING_PRO_STAMP(); //Uncomment this and the one in the end of the while-loop, and comment all but the last PROFILING_* to profile main-loop
+//PROFILING_PRO_STAMP(); //Uncomment this and the one in the end of the while-loop, and comment all other PROFILING_* to profile main-loop
 
         // ------ Common actions
         cvClearMemStorage(storage);
@@ -371,8 +371,12 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 //Mask away anything not in our calibration area
                 mask = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
                 cvZero(mask);
-                cvFillConvexPoly(mask, (CvPoint*) &DD_calibration, 4, cvScalar(WHITE), 1, 0);
+                cvFillConvexPoly(mask, (CvPoint*) &DD_mask, 4, cvScalar(WHITE), 1, 0);
                 cvAnd(imgThreshold, mask, imgThreshold, NULL);
+
+//                cvNot(mask, mask);
+//                cvAddWeighted(imgThreshold, 0.7, mask, 0.3, 0.0, imgThreshold);
+
 
                 // Reduce noise. 
                 // Erode is kind of floor() of pixels, dilate is kind of ceil()
@@ -441,14 +445,14 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 break; //End of GRAB_DOTS
 
 
-            case CALIBRATE:
+            case SELECT_MASK:
 
                 //One day we might do something here
-                break; //End of CALIBRATE
+                break; //End of SELECT_MASK
         }
 
-        // Paint the corners of the detecting area
-        paintCalibrationPoints(grabbedImage);
+        // Paint the corners of the detecting area and the calibration area
+        paintOverlayPoints(grabbedImage);
 
         //Print some statistics to the image
         if (show) {
@@ -477,9 +481,9 @@ int run(const char *serverAddress, const int serverPort, char headless)
         i = (cvWaitKey(10) & 0xff);
         switch(i) {
             case 'v': show = ~show; break; //Toggles updating of the image. Can be useful for performance of slower machines... Or as frame freeze
-            case 'r': state = CALIBRATE; currentCalibrationPoint = TOP_LEFT; break; //Starts calibration. Will return to dot detection once all four calibration points are set
-            case 'f': flip = ~flip; break; //Toggles flipping of the image
-            case 'g': vflip = ~vflip; break; //Toggles flipping of the image
+            case 'm': state = SELECT_MASK; currentCalibrationPoint = TOP_LEFT; break; //Starts selection of masking area. Will return to dot detection once all four points are set
+            case 'f': flip = ~flip; break; //Toggles horizontal flipping of the image
+            case 'g': vflip = ~vflip; break; //Toggles vertical flipping of the image
             case 'n': noiceReduction = (noiceReduction + 1) % 3; break; //Cycles noice reduction algorithm
             case  27: done = 1; break; //ESC. Kills the whole thing (in a nice and controlled manner)
         }
