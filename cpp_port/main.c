@@ -135,6 +135,7 @@ void addPointToSendQueue(const float p[2], SendQueue *q)
 // Sends "ndd" if there are no dots detected
 void sendQueue(int sockfd, SendQueue *q)
 {
+    static char sentEmpty = 0;
     int ret, len = 0;
     char buf[10240];
     buf[0] = '\0';
@@ -153,23 +154,37 @@ void sendQueue(int sockfd, SendQueue *q)
     }
     if(len > 0) {
         buf[--len] = '\0'; //Remove the trailing space
+
+        // Resetting empty queue counter (see below for explanation)
+        sentEmpty = 0;
+
+        //	printf("Sending: \"%s\"\n", buf);
+        send(sockfd, buf, len, 0);
     }
     else {
-        //If no dots are detected we send "ndd", No Dots Detected. Sending "" didn't seem to work.
-        buf[0] = 'n';
-        buf[1] = 'd';
-        buf[2] = 'd';
-        buf[3] = '\0';
-        len = 3;
+        if( sentEmpty < 5 ) {
+
+            // We keep track of how many times (in a row) we have sent an empty queue.
+            // We do this so that we don't keep sending 'ndd' forever, but we still want
+            // to send it a few times (we are using UDP after all)
+            sentEmpty++; 
+
+            //If no dots are detected we send "ndd", No Dots Detected. Sending "" didn't seem to work.
+            buf[0] = 'n';
+            buf[1] = 'd';
+            buf[2] = 'd';
+            buf[3] = '\0';
+            len = 3;
+
+            //	printf("Sending: \"%s\"\n", buf);
+            send(sockfd, buf, len, 0);
+        }
     }
-    //	printf("Sending: \"%s\"\n", buf);
-    send(sockfd, buf, len, 0);
 }
 
 // Removes all elements from the send queue, freeing up the memory allocated to them
 // Will not destroy the actual queue. New elements can still be added after running this
-void clearSendQueue(SendQueue *q)
-{
+void clearSendQueue(SendQueue *q) {
     SendQueue *toBeFreed;
     SendQueue *first = q;
 
@@ -185,8 +200,7 @@ void clearSendQueue(SendQueue *q)
 
 // Destroys the send queue, freeing up all memory allocated to it.
 // Not to be confused with clearSendQueue()
-void destroySendQueue(SendQueue *q)
-{
+void destroySendQueue(SendQueue *q) {
     clearSendQueue(q);
     free(q);
 }
@@ -200,8 +214,7 @@ void drawCircle(int x, int y, int radius, IplImage *target) {
 }
 
 /* Return 1 if the difference is negative, otherwise 0.  */
-int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
-{
+int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1) {
     long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
     result->tv_sec = diff / 1000000;
     result->tv_usec = diff % 1000000;
@@ -211,8 +224,7 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
 
 // The callback function for a click while in calibration mode
 // Sets the state to GRAB_DOTS after the last point is calibrated
-void calibrateClick(int event, int x, int y, int flags, void* param) 
-{
+void calibrateClick(int event, int x, int y, int flags, void* param) {
     int* currentCalibrationPoint = (int *) param;
     if(state == SELECT_MASK) {
         if(event == CV_EVENT_LBUTTONDOWN) {
@@ -248,8 +260,7 @@ void paintOverlayPoints(IplImage* grabbedImage) {
 }
 
 // Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options of possibly a config file first though
-int run(const char *serverAddress, const int serverPort, char headless)
-{
+int run(const char *serverAddress, const int serverPort, char headless) {
     int i, sockfd, show = ~0, flip = 0, vflip = 0, noiceReduction = 0, done = 0;
     int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
     int minDotRadius = 1;
@@ -297,7 +308,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     // Create a window to hold the configuration sliders and the detection frame TODO This is kind of a hack. Make a better solution
     cvNamedWindow("configwindow", CV_WINDOW_AUTOSIZE);
 
-    // Create sliders to adjust the lower color boundry, param 1 and 2 for the circle detector (whatever they do?)
+    // Create sliders to adjust the lower color boundry
     cvCreateTrackbar("Red",     "configwindow", &min.red,   255,    NULL);
     cvCreateTrackbar("Green",   "configwindow", &min.green, 255,    NULL);
     cvCreateTrackbar("Blue",    "configwindow", &min.blue,  255,    NULL);
@@ -510,8 +521,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     return returnValue;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     int ret;
     long int serverPort = DEFAULT_SERVER_PORT;
     char *serverAddress = NULL;
