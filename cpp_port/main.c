@@ -262,6 +262,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
     IplImage *grabbedImage = NULL;
     IplImage *imgThreshold = NULL;
     IplImage *mask = NULL;
+    IplImage *coloredMask = NULL;
     CvSeq *seq;
     CvFont font;
     SendQueue *queue;
@@ -313,7 +314,11 @@ int run(const char *serverAddress, const int serverPort, char headless)
     // Grab an initial image to be able to fetch image size before the main loop.
     grabbedImage = cvQueryFrame(capture);
 
-    // Set calibration defaults TODO load from file?
+    //Move the two windows so both are visible at the same time
+    cvMoveWindow("imagewindow", 0, 0);
+    cvMoveWindow("configwindow", grabbedImage->width+2, 0);
+
+    // Set masking defaults TODO load from file? Specify file for this file loading?
     DD_mask.topLeft.x = 0;  
     DD_mask.topLeft.y = 0;
 
@@ -374,8 +379,10 @@ int run(const char *serverAddress, const int serverPort, char headless)
                 cvFillConvexPoly(mask, (CvPoint*) &DD_mask, 4, cvScalar(WHITE), 1, 0);
                 cvAnd(imgThreshold, mask, imgThreshold, NULL);
 
-//                cvNot(mask, mask);
-//                cvAddWeighted(imgThreshold, 0.7, mask, 0.3, 0.0, imgThreshold);
+                cvNot(mask, mask);
+                coloredMask = cvCreateImage(cvGetSize(grabbedImage), grabbedImage->depth, grabbedImage->nChannels );
+                cvCvtColor(mask, coloredMask, CV_GRAY2BGR);
+                cvAddWeighted(grabbedImage, 0.95, coloredMask, 0.05, 0.0, grabbedImage);
 
 
                 // Reduce noise. 
@@ -472,6 +479,7 @@ int run(const char *serverAddress, const int serverPort, char headless)
         //Release the temporary images
         cvReleaseImage(&imgThreshold);
         cvReleaseImage(&mask);
+        cvReleaseImage(&coloredMask);
 
         //Add one to the frame rate counter
         frames++;
