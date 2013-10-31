@@ -21,6 +21,7 @@
 // States
 #define GRAB_DOTS 1
 #define SELECT_MASK 2
+#define SELECT_TRANSFORM 3
 
 // Cornors of the calibrator
 //
@@ -47,12 +48,17 @@ struct color {
 };
 typedef struct color Color;
 
-struct {
+typedef struct BoundingBox {
     CvPoint topLeft;
     CvPoint topRight;
     CvPoint bottomRight;
     CvPoint bottomLeft;
-} DD_mask;
+} BoundingBox;
+
+typedef struct ClickParams {
+    int currentPoint;
+    struct BoundingBox * DD_box;
+} ClickParams;
 
 static char state = GRAB_DOTS;
 
@@ -109,8 +115,7 @@ int initNetwork(const char *serverAddress, const int serverPort)
 }
 
 // Sets up the send queue
-SendQueue *initSendQueue()
-{
+SendQueue *initSendQueue() {
     SendQueue *q = malloc(sizeof(SendQueue));
     q->next = NULL;
     return q;
@@ -225,38 +230,44 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
 // The callback function for a click while in calibration mode
 // Sets the state to GRAB_DOTS after the last point is calibrated
 void calibrateClick(int event, int x, int y, int flags, void* param) {
-    int* currentCalibrationPoint = (int *) param;
-    if(state == SELECT_MASK) {
+    ClickParams * clickParams = (ClickParams*) param;
+    int* currentCalibrationPoint = (int*) &clickParams->currentPoint;
+    BoundingBox* DD_box = (BoundingBox *) clickParams->DD_box;
+
+    if(state == SELECT_MASK || state == SELECT_TRANSFORM) { //State is zero when finding dots
         if(event == CV_EVENT_LBUTTONDOWN) {
             if(*currentCalibrationPoint <= BOTTOM_LEFT) { // This should be a unneccessary clause
 
-                printf("Calibrating point %d\n", *currentCalibrationPoint);
+                printf("Calibrating mask point %d\n", *currentCalibrationPoint);
                 CvPoint p = { x, y };
                 switch(*currentCalibrationPoint) {
-                    case TOP_LEFT:      DD_mask.topLeft      = p; break;
-                    case TOP_RIGHT:     DD_mask.topRight     = p; break;
-                    case BOTTOM_RIGHT:  DD_mask.bottomRight  = p; break;
-                    case BOTTOM_LEFT:   DD_mask.bottomLeft   = p; break;
+                    case TOP_LEFT:      DD_box->topLeft      = p; break;
+                    case TOP_RIGHT:     DD_box->topRight     = p; break;
+                    case BOTTOM_RIGHT:  DD_box->bottomRight  = p; break;
+                    case BOTTOM_LEFT:   DD_box->bottomLeft   = p; break;
                 }
                 ++(*currentCalibrationPoint);
-                if(*currentCalibrationPoint > BOTTOM_LEFT) {
-                    state = GRAB_DOTS;
-                }
             }
+        }
+        else if(event == CV_EVENT_RBUTTONDOWN) { //Allow skipping already well calibrated points
+            ++(*currentCalibrationPoint);
+        }
+        if(*currentCalibrationPoint > BOTTOM_LEFT) {
+            state = GRAB_DOTS;
         }
     }
 }
 
 // Paints the edges of the calibration area
-void paintOverlayPoints(IplImage* grabbedImage) {
-    cvCircle(grabbedImage, DD_mask.topLeft, 2, cvScalar(BLUE), -1, 8, 0); 
-    cvLine(grabbedImage, DD_mask.topLeft, DD_mask.topRight, cvScalar(GREEN), 1, 8, 0);
-    cvCircle(grabbedImage, DD_mask.topRight, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_mask.topRight, DD_mask.bottomRight, cvScalar(GREEN), 1, 8, 0);
-    cvCircle(grabbedImage, DD_mask.bottomLeft, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_mask.bottomRight, DD_mask.bottomLeft, cvScalar(GREEN), 1, 8, 0);
-    cvCircle(grabbedImage, DD_mask.bottomRight, 2, cvScalar(BLUE), -1, 8, 0);
-    cvLine(grabbedImage, DD_mask.bottomLeft, DD_mask.topLeft, cvScalar(GREEN), 1, 8, 0);
+void paintOverlayPoints(IplImage* grabbedImage, BoundingBox* DD_box) {
+    cvCircle(grabbedImage, DD_box->topLeft, 2, cvScalar(BLUE), -1, 8, 0); 
+    cvLine(grabbedImage, DD_box->topLeft, DD_box->topRight, cvScalar(GREEN), 1, 8, 0);
+    cvCircle(grabbedImage, DD_box->topRight, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_box->topRight, DD_box->bottomRight, cvScalar(GREEN), 1, 8, 0);
+    cvCircle(grabbedImage, DD_box->bottomLeft, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_box->bottomRight, DD_box->bottomLeft, cvScalar(GREEN), 1, 8, 0);
+    cvCircle(grabbedImage, DD_box->bottomRight, 2, cvScalar(BLUE), -1, 8, 0);
+    cvLine(grabbedImage, DD_box->bottomLeft, DD_box->topLeft, cvScalar(GREEN), 1, 8, 0);
 }
 
 // Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options of possibly a config file first though
@@ -268,6 +279,8 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     int returnValue = EXIT_SUCCESS;
     Color min = {240, 180, 180, 0};
     Color max = {255, 255, 255, 0};
+    BoundingBox DD_mask;
+    BoundingBox DD_transform;
     CvCapture *capture;
     CvMemStorage *storage;
     IplImage *grabbedImage = NULL;
@@ -280,7 +293,8 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     char strbuf[255];
     struct timeval oldTime, time, diff;
     float lastKnownFPS = 0;
-    int currentCalibrationPoint = TOP_LEFT;
+    ClickParams clickParams = { TOP_LEFT, NULL };
+//    int currentCalibrationPoint = TOP_LEFT;
 
     sockfd = initNetwork(serverAddress, serverPort);
     if (sockfd == -1) {
@@ -303,10 +317,10 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     }
 
     // Create a window in which the captured images will be presented
-    cvNamedWindow("imagewindow", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("imagewindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL );
 
     // Create a window to hold the configuration sliders and the detection frame TODO This is kind of a hack. Make a better solution
-    cvNamedWindow("configwindow", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("configwindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
 
     // Create sliders to adjust the lower color boundry
     cvCreateTrackbar("Red",     "configwindow", &min.red,   255,    NULL);
@@ -342,8 +356,21 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     DD_mask.bottomRight.x = grabbedImage->width-1;
     DD_mask.bottomRight.y = grabbedImage->height-1;
 
+    // Set transformation defaults TODO load from file? Specify file for this file loading?
+    DD_transform.topLeft.x = 0;  
+    DD_transform.topLeft.y = 0;
+
+    DD_transform.topRight.x = grabbedImage->width-1;
+    DD_transform.topRight.y = 0;
+
+    DD_transform.bottomLeft.x = 0;
+    DD_transform.bottomLeft.y = grabbedImage->height-1;
+
+    DD_transform.bottomRight.x = grabbedImage->width-1;
+    DD_transform.bottomRight.y = grabbedImage->height-1;
+
     // Set callback function for mouse clicks
-    cvSetMouseCallback("imagewindow", calibrateClick, (void*) &currentCalibrationPoint);
+    cvSetMouseCallback("imagewindow", calibrateClick, (void*) &clickParams );
 
     gettimeofday(&oldTime, NULL);
     
@@ -470,7 +497,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
         }
 
         // Paint the corners of the detecting area and the calibration area
-        paintOverlayPoints(grabbedImage);
+        paintOverlayPoints(grabbedImage, &DD_transform);
 
         //Print some statistics to the image
         if (show) {
@@ -500,7 +527,8 @@ int run(const char *serverAddress, const int serverPort, char headless) {
         i = (cvWaitKey(10) & 0xff);
         switch(i) {
             case 'v': show = ~show; break; //Toggles updating of the image. Can be useful for performance of slower machines... Or as frame freeze
-            case 'm': state = SELECT_MASK; currentCalibrationPoint = TOP_LEFT; break; //Starts selection of masking area. Will return to dot detection once all four points are set
+            case 'm': state = SELECT_MASK; clickParams.currentPoint = TOP_LEFT; clickParams.DD_box = &DD_mask; break; //Starts selection of masking area. Will return to dot detection once all four points are set
+            case 't': state = SELECT_TRANSFORM; clickParams.currentPoint = TOP_LEFT; clickParams.DD_box = &DD_transform; break;
             case 'f': flip = ~flip; break; //Toggles horizontal flipping of the image
             case 'g': vflip = ~vflip; break; //Toggles vertical flipping of the image
             case 'n': noiceReduction = (noiceReduction + 1) % 3; break; //Cycles noice reduction algorithm
