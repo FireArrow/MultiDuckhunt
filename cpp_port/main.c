@@ -23,7 +23,7 @@
 #define SELECT_MASK 2
 #define SELECT_TRANSFORM 3
 
-// Cornors of the calibrator
+// Cornors of a bounding box
 //
 // 0 ------- 1
 // |        /
@@ -34,6 +34,15 @@
 #define TOP_RIGHT 1
 #define BOTTOM_RIGHT 2
 #define BOTTOM_LEFT 3
+
+// A translation table for the points. Intended to be used as
+// "Select %s point", pointTranslationTable[clickParams.currentPoint]
+static char* pointTranslationTable[] = {
+    "top left",
+    "top right",
+    "bottom right",
+    "bottom left"
+};
 
 #define DD_COLOR(c) c.blue, c.green, c.red, c.alpha
 // cvScalar, used to handle colors in OpenCV uses doules internally.
@@ -58,6 +67,8 @@ typedef struct BoundingBox {
 typedef struct ClickParams {
     int currentPoint;
     struct BoundingBox * DD_box;
+    struct BoundingBox * DD_transformation_to;
+    struct CvMat * transMat;
 } ClickParams;
 
 static char state = GRAB_DOTS;
@@ -227,20 +238,27 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
     return (diff<0);
 }
 
+// A function to calculate the transformation matrix used for perspective transformation
+void calculateTransformationMatrix(BoundingBox* from, BoundingBox* to, CvMat* transMat) {
+    CvPoint2D32f from_arr[] = { cvPointTo32f(from->topLeft), cvPointTo32f(from->topRight), cvPointTo32f(from->bottomRight), cvPointTo32f(from->bottomLeft) };
+    CvPoint2D32f to_arr[] = { cvPointTo32f(to->topLeft), cvPointTo32f(to->topRight), cvPointTo32f(to->bottomRight), cvPointTo32f(to->bottomLeft) };
+    cvGetPerspectiveTransform( from_arr, to_arr, transMat);
+}
+
 // The callback function for a click while in calibration mode
 // Sets the state to GRAB_DOTS after the last point is calibrated
 void calibrateClick(int event, int x, int y, int flags, void* param) {
     ClickParams * clickParams = (ClickParams*) param;
     int* currentCalibrationPoint = (int*) &clickParams->currentPoint;
-    BoundingBox* DD_box = (BoundingBox *) clickParams->DD_box;
+    BoundingBox* DD_box = clickParams->DD_box;
 
     if(state == SELECT_MASK || state == SELECT_TRANSFORM) { //State is zero when finding dots
         if(event == CV_EVENT_LBUTTONDOWN) {
             if(*currentCalibrationPoint <= BOTTOM_LEFT) { // This should be a unneccessary clause
 
-                printf("Calibrating mask point %d\n", *currentCalibrationPoint);
+                printf("Calibrating %s point\n", pointTranslationTable[*currentCalibrationPoint]);
                 CvPoint p = { x, y };
-                switch(*currentCalibrationPoint) {
+                switch(*currentCalibrationPoint) { //TODO Potentiell minnesläcka här. Sätt x och y direkt istället
                     case TOP_LEFT:      DD_box->topLeft      = p; break;
                     case TOP_RIGHT:     DD_box->topRight     = p; break;
                     case BOTTOM_RIGHT:  DD_box->bottomRight  = p; break;
@@ -253,6 +271,12 @@ void calibrateClick(int event, int x, int y, int flags, void* param) {
             ++(*currentCalibrationPoint);
         }
         if(*currentCalibrationPoint > BOTTOM_LEFT) {
+
+            // When all corners are set, finish up and go back to detecting dots
+            switch(state) {
+                case SELECT_MASK: /*Do nothing for now*/ break;
+                case SELECT_TRANSFORM: calculateTransformationMatrix(DD_box, clickParams->DD_transformation_to, clickParams->transMat); break;
+            }
             state = GRAB_DOTS;
         }
     }
@@ -270,21 +294,23 @@ void paintOverlayPoints(IplImage* grabbedImage, BoundingBox* DD_box) {
     cvLine(grabbedImage, DD_box->bottomLeft, DD_box->topLeft, cvScalar(GREEN), 1, 8, 0);
 }
 
-// Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options of possibly a config file first though
+// Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options and/or possibly a config file first though
 int run(const char *serverAddress, const int serverPort, char headless) {
     int i, sockfd, show = ~0, flip = 0, vflip = 0, noiceReduction = 0, done = 0;
     int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
     int minDotRadius = 1;
-    int frames = 0, detected_dots;
+    int detected_dots;
     int returnValue = EXIT_SUCCESS;
     Color min = {240, 180, 180, 0};
     Color max = {255, 255, 255, 0};
     BoundingBox DD_mask;
-    BoundingBox DD_transform;
+    BoundingBox DD_transform; //The box selecting what is the screen
+    BoundingBox DD_transform_to; //The plane we are transforming to
     CvCapture *capture;
     CvMemStorage *storage;
     IplImage *grabbedImage = NULL;
     IplImage *imgThreshold = NULL;
+    IplImage *imgThresholdTransformed = NULL;
     IplImage *mask = NULL;
     IplImage *coloredMask = NULL;
     CvSeq *seq;
@@ -293,8 +319,8 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     char strbuf[255];
     struct timeval oldTime, time, diff;
     float lastKnownFPS = 0;
-    ClickParams clickParams = { TOP_LEFT, NULL };
-//    int currentCalibrationPoint = TOP_LEFT;
+    CvMat* transMat = cvCreateMat(3,3,CV_32FC1); //Translation matrix for transforming input to a straight rectangle
+    ClickParams clickParams = { TOP_LEFT, NULL, &DD_transform_to, transMat };
 
     sockfd = initNetwork(serverAddress, serverPort);
     if (sockfd == -1) {
@@ -321,6 +347,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
 
     // Create a window to hold the configuration sliders and the detection frame TODO This is kind of a hack. Make a better solution
     cvNamedWindow("configwindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
+    cvNamedWindow("testwindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL); //TODO Ta bort
 
     // Create sliders to adjust the lower color boundry
     cvCreateTrackbar("Red",     "configwindow", &min.red,   255,    NULL);
@@ -340,9 +367,10 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     grabbedImage = cvQueryFrame(capture);
 
     //Move the two windows so both are visible at the same time
-    cvMoveWindow("imagewindow", 0, 0);
-    cvMoveWindow("configwindow", grabbedImage->width+2, 0);
+    cvMoveWindow("imagewindow", 0, 10);
+    cvMoveWindow("configwindow", grabbedImage->width+2, 10);
 
+    //TODO Move these three inits to a function
     // Set masking defaults TODO load from file? Specify file for this file loading?
     DD_mask.topLeft.x = 0;  
     DD_mask.topLeft.y = 0;
@@ -369,6 +397,21 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     DD_transform.bottomRight.x = grabbedImage->width-1;
     DD_transform.bottomRight.y = grabbedImage->height-1;
 
+    // Set the transformation destination
+    DD_transform_to.topLeft.x = 0;  
+    DD_transform_to.topLeft.y = 0;
+
+    DD_transform_to.topRight.x = grabbedImage->width-1;
+    DD_transform_to.topRight.y = 0;
+
+    DD_transform_to.bottomLeft.x = 0;
+    DD_transform_to.bottomLeft.y = grabbedImage->height-1;
+
+    DD_transform_to.bottomRight.x = grabbedImage->width-1;
+    DD_transform_to.bottomRight.y = grabbedImage->height-1;
+    
+    calculateTransformationMatrix(&DD_transform, &DD_transform_to, transMat);
+
     // Set callback function for mouse clicks
     cvSetMouseCallback("imagewindow", calibrateClick, (void*) &clickParams );
 
@@ -383,11 +426,11 @@ int run(const char *serverAddress, const int serverPort, char headless) {
         cvClearMemStorage(storage);
         detected_dots = 0;
 
-        PROFILING_PRO_STAMP();
-
         //Grab a fram from the camera
+        PROFILING_PRO_STAMP();
         grabbedImage = cvQueryFrame(capture);
         PROFILING_POST_STAMP("cvQueryFrame");
+
         if (grabbedImage == NULL) {
             fprintf( stderr, "ERROR: frame is null...\n" );
             getchar();
@@ -432,19 +475,30 @@ int run(const char *serverAddress, const int serverPort, char headless) {
                     case 2: cvDilate(imgThreshold, imgThreshold, NULL, 2); break;
                 }
 
-                //Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
-                //should be fine as it is right now.
+                // Transform the threshold image
+                imgThresholdTransformed = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
+
+                PROFILING_PRO_STAMP();
+                cvWarpPerspective(imgThreshold, imgThresholdTransformed, transMat, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, cvScalarAll(0));
+//                cvWarpPerspective(grabbedImage, coloredMask, transMat, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, cvScalarAll(0)); //TODO Ta bort
+                PROFILING_POST_STAMP("Warping perspective");
+
+
+                // Find all dots in the image. This is where any calibration of dot detection is done, if needed, though it
+                // should be fine as it is right now.
                 PROFILING_PRO_STAMP();
 
                 seq = 0;
-                cvFindContours( imgThreshold, storage, &seq, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
-                cvZero(imgThreshold);
 
+                // Find the dots
+                cvFindContours( imgThresholdTransformed, storage, &seq, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
+                cvZero(imgThresholdTransformed); //cvFindContours destroys the original image, so we wipe it here and then repaints the detected dots later
+                
                 PROFILING_POST_STAMP("Dot detection");
 
-                PROFILING_PRO_STAMP();
 
                 //Process all detected dots
+                PROFILING_PRO_STAMP();
                 for( ; seq != 0; seq = seq->h_next ) {
 
                     CvRect rect = ((CvContour *)seq)->rect;
@@ -457,29 +511,28 @@ int run(const char *serverAddress, const int serverPort, char headless) {
                     }
 
                     CvScalar color = cvScalar( WHITE );
-                    cvDrawContours( imgThreshold, seq, color, color, -1, CV_FILLED, 8, cvPoint(0,0));
+                    cvDrawContours( imgThresholdTransformed, seq, color, color, -1, CV_FILLED, 8, cvPoint(0,0));
 
                     float absCenter[] = { rect.x + relCenterX, rect.y + relCenterY };
 
                     ++detected_dots;
 
-                    if(show) drawCircle( absCenter[0], absCenter[1], (relCenterX + relCenterY) / 2, grabbedImage);
+                    if(show) drawCircle( absCenter[0], absCenter[1], (relCenterX + relCenterY) / 2, imgThresholdTransformed); //TODO Ändra till något vettigare. Det var grabbedImage, men det kommer bli fel med nuvarande transformation
                     
                     // Add detected points (if any) to to send queue
-                    addPointToSendQueue( absCenter, queue ); 
+                //    addPointToSendQueue( absCenter, queue ); 
                 }
 
+
+
                 PROFILING_POST_STAMP("Painting dots");
+
 
                 //Calculate framerate
                 gettimeofday(&time, NULL);
                 timeval_subtract(&diff, &time, &oldTime);
-                //		printf("Frames = %i\n", diff.tv_sec);
-                if (diff.tv_sec >= 2) {
-                    lastKnownFPS = (float)frames / diff.tv_sec;
-                    oldTime = time;
-                    frames = 0;
-                }
+                lastKnownFPS = lastKnownFPS * 0.2 + (1000000.0 / diff.tv_usec) * 0.8; //We naïvly assume we have more then 1 fps
+                oldTime = time;
 
                 //Send to dots detected this frame to the server
                 PROFILING_PRO_STAMP();
@@ -489,11 +542,13 @@ int run(const char *serverAddress, const int serverPort, char headless) {
 
                 break; //End of GRAB_DOTS
 
-
+            case SELECT_TRANSFORM:
+                //Falling through here. Poor man's multi-case clause. Not putting this in default as we might
+                //want to do different things in these two some day.
             case SELECT_MASK:
-
-                //One day we might do something here
-                break; //End of SELECT_MASK
+                snprintf(strbuf, sizeof(strbuf), "Select %s point", pointTranslationTable[clickParams.currentPoint]);
+                cvDisplayOverlay("imagewindow", strbuf, 5);
+                break; //End of SELECT_MASK and SELECT_TRANSFORM
         }
 
         // Paint the corners of the detecting area and the calibration area
@@ -509,28 +564,29 @@ int run(const char *serverAddress, const int serverPort, char headless) {
         }
 
         //Show images 
+        PROFILING_PRO_STAMP();
         if (show) {
-            cvShowImage("configwindow", imgThreshold);
+            cvShowImage("configwindow", imgThresholdTransformed);
             cvShowImage("imagewindow", grabbedImage);
+        //    cvShowImage("testwindow", coloredMask);
         }
+        PROFILING_POST_STAMP("Showing images");
 
         //Release the temporary images
         cvReleaseImage(&imgThreshold);
+        cvReleaseImage(&imgThresholdTransformed);
         cvReleaseImage(&mask);
         cvReleaseImage(&coloredMask);
-
-        //Add one to the frame rate counter
-        frames++;
 
         //If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
         //remove higher bits using AND operator
         i = (cvWaitKey(10) & 0xff);
         switch(i) {
-            case 'v': show = ~show; break; //Toggles updating of the image. Can be useful for performance of slower machines... Or as frame freeze
+            case 's': show = ~show; break; //Toggles updating of the image. Can be useful for performance of slower machines... Or as frame freeze
             case 'm': state = SELECT_MASK; clickParams.currentPoint = TOP_LEFT; clickParams.DD_box = &DD_mask; break; //Starts selection of masking area. Will return to dot detection once all four points are set
             case 't': state = SELECT_TRANSFORM; clickParams.currentPoint = TOP_LEFT; clickParams.DD_box = &DD_transform; break;
             case 'f': flip = ~flip; break; //Toggles horizontal flipping of the image
-            case 'g': vflip = ~vflip; break; //Toggles vertical flipping of the image
+            case 'v': vflip = ~vflip; break; //Toggles vertical flipping of the image
             case 'n': noiceReduction = (noiceReduction + 1) % 3; break; //Cycles noice reduction algorithm
             case  27: done = 1; break; //ESC. Kills the whole thing (in a nice and controlled manner)
         }
@@ -544,6 +600,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     cvReleaseMemStorage( &storage );
     cvDestroyWindow( "imagewindow" );
     cvDestroyWindow( "configwindow" );
+    cvDestroyWindow( "testwindow" ); //TODO Ta bort
     destroySendQueue(queue);
     close(sockfd);
     return returnValue;
