@@ -268,6 +268,7 @@ void calibrateClick(int event, int x, int y, int flags, void* param) {
             }
         }
         else if(event == CV_EVENT_RBUTTONDOWN) { //Allow skipping already well calibrated points
+                printf("Keeping old calibration of %s point\n", pointTranslationTable[*currentCalibrationPoint]);
             ++(*currentCalibrationPoint);
         }
         if(*currentCalibrationPoint > BOTTOM_LEFT) {
@@ -279,6 +280,16 @@ void calibrateClick(int event, int x, int y, int flags, void* param) {
             }
             state = GRAB_DOTS;
         }
+    }
+}
+
+// Creates or destroys the warp window
+void toggleWarpOutput(char state) {
+    if(state) {
+        cvNamedWindow("warpwindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
+    }
+    else {
+        cvDestroyWindow("warpwindow");
     }
 }
 
@@ -296,32 +307,37 @@ void paintOverlayPoints(IplImage* grabbedImage, BoundingBox* DD_box) {
 
 // Runs the dot detector and sends detected dots to server on port TODO Implement headless. Needs more config options and/or possibly a config file first though
 int run(const char *serverAddress, const int serverPort, char headless) {
-    int i, sockfd, show = ~0, flip = 0, vflip = 0, noiceReduction = 0, done = 0;
-    int dp = 0, minDist = 29, param1 = 0, param2 = 5, minRadius = 2, maxRadius = 20; // Configuration variables for circle detection 
+    char show = ~0, flip = 0, vflip = 0, done = 0, warp = ~0; //"Boolean" values used in this loop
+    char noiceReduction = 0; //Small counter, so char is still ok.
+    int i, sockfd; //Generic counter
+    int dp = 0, minDist = 29, param1 = 0, param2 = 5; // Configuration variables for circle detection 
     int minDotRadius = 1;
-    int detected_dots;
+    int detected_dots; //Detected dot counter
     int returnValue = EXIT_SUCCESS;
-    Color min = {240, 180, 180, 0};
-    Color max = {255, 255, 255, 0};
-    BoundingBox DD_mask;
-    BoundingBox DD_transform; //The box selecting what is the screen
+    Color min = {240, 100, 100, 0}; //Minimum color to detect
+    Color max = {255, 255, 255, 0}; //Maximum color to detect
+    CvScalar colorWhite = cvScalar( WHITE ); //Color to draw detected dots on black and white surface
+    BoundingBox DD_mask; //The box indicating what should and what should not be considered for dot search
+    BoundingBox DD_transform; //The box indicating the plane we are looking at (and as such is the plane we would transform from)
     BoundingBox DD_transform_to; //The plane we are transforming to
-    CvCapture *capture;
-    CvMemStorage *storage;
-    IplImage *grabbedImage = NULL;
-    IplImage *imgThreshold = NULL;
-    IplImage *imgThresholdTransformed = NULL;
-    IplImage *mask = NULL;
-    IplImage *coloredMask = NULL;
-    CvSeq *seq;
-    CvFont font;
-    SendQueue *queue;
-    char strbuf[255];
-    struct timeval oldTime, time, diff;
-    float lastKnownFPS = 0;
+    CvCapture *capture; //The camera
+    CvMemStorage *storage; //Low level memory area used for dynamic structures in OpenCV
+    CvSeq *seq; //Sequence to store detected dots in
+    IplImage *grabbedImage = NULL; //Raw image from camera (plus some overlay in the end)
+    IplImage *imgThreshold = NULL; //Image with detected dots
+    IplImage *mask = NULL; //Mask to be able to remove uninteresting areas
+    IplImage *coloredMask = NULL; //Mask to be able to indicate above mask on output image
+    CvFont font; //Font for drawing text on images
+    SendQueue *queue; //Head of the linked list that is the send queue
+    char strbuf[255]; //Generic buffer for text formatting (with sprintf())
+    struct timeval oldTime, time, diff; //Structs for measuring FPS
+    float lastKnownFPS = 0; //Calculated FPS
+    CvMat* pointRealMat = cvCreateMat(1,1,CV_32FC2); //Single point matrix for point transformation
+    CvMat* pointTransMat = cvCreateMat(1,1,CV_32FC2); //Single point matrix for point transformation
     CvMat* transMat = cvCreateMat(3,3,CV_32FC1); //Translation matrix for transforming input to a straight rectangle
-    ClickParams clickParams = { TOP_LEFT, NULL, &DD_transform_to, transMat };
+    ClickParams clickParams = { TOP_LEFT, NULL, &DD_transform_to, transMat }; //Struct holding data needed by mouse-click callback function
 
+    // Set up network
     sockfd = initNetwork(serverAddress, serverPort);
     if (sockfd == -1) {
         fprintf(stderr, "ERROR: initNetwork returned -1\n");
@@ -347,7 +363,9 @@ int run(const char *serverAddress, const int serverPort, char headless) {
 
     // Create a window to hold the configuration sliders and the detection frame TODO This is kind of a hack. Make a better solution
     cvNamedWindow("configwindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
-    cvNamedWindow("testwindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL); //TODO Ta bort
+
+    // Create a window to hold the transformed image. Handy to see how the dots are translated, but not needed for functionality
+    cvNamedWindow("warpwindow", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
 
     // Create sliders to adjust the lower color boundry
     cvCreateTrackbar("Red",     "configwindow", &min.red,   255,    NULL);
@@ -417,7 +435,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
 
     gettimeofday(&oldTime, NULL);
     
-    // Show the image captured from the camera in the window and repeat
+    // Main loop. Grabbs an image from cam, detects dots, sends dots,and prints dots to images and shows to user
     while (!done) {
 
 //PROFILING_PRO_STAMP(); //Uncomment this and the one in the end of the while-loop, and comment all other PROFILING_* to profile main-loop
@@ -460,6 +478,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
                 cvFillConvexPoly(mask, (CvPoint*) &DD_mask, 4, cvScalar(WHITE), 1, 0);
                 cvAnd(imgThreshold, mask, imgThreshold, NULL);
 
+                // Invert mask, increase the number of channels in it and overlay on grabbedImage //TODO Tint the mask red before overlaying
                 cvNot(mask, mask);
                 coloredMask = cvCreateImage(cvGetSize(grabbedImage), grabbedImage->depth, grabbedImage->nChannels );
                 cvCvtColor(mask, coloredMask, CV_GRAY2BGR);
@@ -475,12 +494,9 @@ int run(const char *serverAddress, const int serverPort, char headless) {
                     case 2: cvDilate(imgThreshold, imgThreshold, NULL, 2); break;
                 }
 
-                // Transform the threshold image
-                imgThresholdTransformed = cvCreateImage(cvGetSize(grabbedImage), 8, 1);
-
+                // Warp the warp-image. We are reusing the coloredMask variable to save some space
                 PROFILING_PRO_STAMP();
-                cvWarpPerspective(imgThreshold, imgThresholdTransformed, transMat, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, cvScalarAll(0));
-//                cvWarpPerspective(grabbedImage, coloredMask, transMat, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, cvScalarAll(0)); //TODO Ta bort
+                if(show && warp) cvWarpPerspective(grabbedImage, coloredMask, transMat, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, cvScalarAll(0));
                 PROFILING_POST_STAMP("Warping perspective");
 
 
@@ -488,11 +504,13 @@ int run(const char *serverAddress, const int serverPort, char headless) {
                 // should be fine as it is right now.
                 PROFILING_PRO_STAMP();
 
+                // Clear old data from seq
+//                cvClearSeq(seq);
                 seq = 0;
 
                 // Find the dots
-                cvFindContours( imgThresholdTransformed, storage, &seq, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
-                cvZero(imgThresholdTransformed); //cvFindContours destroys the original image, so we wipe it here and then repaints the detected dots later
+                cvFindContours( imgThreshold, storage, &seq, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
+                cvZero(imgThreshold); //cvFindContours destroys the original image, so we wipe it here and then repaints the detected dots later
                 
                 PROFILING_POST_STAMP("Dot detection");
 
@@ -501,28 +519,35 @@ int run(const char *serverAddress, const int serverPort, char headless) {
                 PROFILING_PRO_STAMP();
                 for( ; seq != 0; seq = seq->h_next ) {
 
+                    // Calculate radius of the detected contour
                     CvRect rect = ((CvContour *)seq)->rect;
                     float relCenterX = rect.width / 2;
                     float relCenterY = rect.height / 2;
 
-                    //Make sure the dot is big enough
+                    // Make sure the dot is big enough
                     if(relCenterX < minDotRadius || relCenterY < minDotRadius) {
                         continue;
                     }
 
-                    CvScalar color = cvScalar( WHITE );
-                    cvDrawContours( imgThresholdTransformed, seq, color, color, -1, CV_FILLED, 8, cvPoint(0,0));
-
-                    float absCenter[] = { rect.x + relCenterX, rect.y + relCenterY };
-
+                    // Note that we have found another dot
                     ++detected_dots;
-
-                    if(show) drawCircle( absCenter[0], absCenter[1], (relCenterX + relCenterY) / 2, imgThresholdTransformed); //TODO Ändra till något vettigare. Det var grabbedImage, men det kommer bli fel med nuvarande transformation
                     
-                    // Add detected points (if any) to to send queue
-                //    addPointToSendQueue( absCenter, queue ); 
-                }
+                    // Transform the detected dot according to transformation matrix.
+                    float absCenter[] = { rect.x + relCenterX, rect.y + relCenterY };
+                    pointRealMat->data.fl = absCenter;
+                    cvPerspectiveTransform(pointRealMat, pointTransMat, transMat);
 
+                    // Draw the detected contour back to imgThreshold
+                    // Draw the detected dot both to real image and to warped (if warp is active)
+                    if(show) {
+                        cvDrawContours( imgThreshold, seq, colorWhite, colorWhite, -1, CV_FILLED, 8, cvPoint(0,0));
+                        drawCircle( absCenter[0], absCenter[1], (relCenterX + relCenterY) / 2, grabbedImage);
+                        if(warp) drawCircle( pointTransMat->data.fl[0], pointTransMat->data.fl[1], (relCenterX + relCenterY) / 2, coloredMask);
+                    }
+                    
+                    // Add detected dot to to send queue
+                    addPointToSendQueue( pointTransMat->data.fl, queue ); 
+                }
 
 
                 PROFILING_POST_STAMP("Painting dots");
@@ -534,7 +559,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
                 lastKnownFPS = lastKnownFPS * 0.2 + (1000000.0 / diff.tv_usec) * 0.8; //We naïvly assume we have more then 1 fps
                 oldTime = time;
 
-                //Send to dots detected this frame to the server
+                //Send the dots detected this frame to the server
                 PROFILING_PRO_STAMP();
                 sendQueue(sockfd, queue);
                 clearSendQueue(queue);
@@ -566,15 +591,14 @@ int run(const char *serverAddress, const int serverPort, char headless) {
         //Show images 
         PROFILING_PRO_STAMP();
         if (show) {
-            cvShowImage("configwindow", imgThresholdTransformed);
+            cvShowImage("configwindow", imgThreshold);
             cvShowImage("imagewindow", grabbedImage);
-        //    cvShowImage("testwindow", coloredMask);
+            if(warp) cvShowImage("warpwindow", coloredMask);
         }
         PROFILING_POST_STAMP("Showing images");
 
         //Release the temporary images
         cvReleaseImage(&imgThreshold);
-        cvReleaseImage(&imgThresholdTransformed);
         cvReleaseImage(&mask);
         cvReleaseImage(&coloredMask);
 
@@ -584,9 +608,10 @@ int run(const char *serverAddress, const int serverPort, char headless) {
         switch(i) {
             case 's': show = ~show; break; //Toggles updating of the image. Can be useful for performance of slower machines... Or as frame freeze
             case 'm': state = SELECT_MASK; clickParams.currentPoint = TOP_LEFT; clickParams.DD_box = &DD_mask; break; //Starts selection of masking area. Will return to dot detection once all four points are set
-            case 't': state = SELECT_TRANSFORM; clickParams.currentPoint = TOP_LEFT; clickParams.DD_box = &DD_transform; break;
+            case 't': state = SELECT_TRANSFORM; clickParams.currentPoint = TOP_LEFT; clickParams.DD_box = &DD_transform; break; //Starts selection of the transformation area. Returns to dot detection when done.
             case 'f': flip = ~flip; break; //Toggles horizontal flipping of the image
             case 'v': vflip = ~vflip; break; //Toggles vertical flipping of the image
+            case 'w': warp = ~warp; toggleWarpOutput(warp); break; //Toggles showing the warped image
             case 'n': noiceReduction = (noiceReduction + 1) % 3; break; //Cycles noice reduction algorithm
             case  27: done = 1; break; //ESC. Kills the whole thing (in a nice and controlled manner)
         }
@@ -600,7 +625,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     cvReleaseMemStorage( &storage );
     cvDestroyWindow( "imagewindow" );
     cvDestroyWindow( "configwindow" );
-    cvDestroyWindow( "testwindow" ); //TODO Ta bort
+    if(warp) cvDestroyWindow( "warpwindow" ); //If now warp it is already destroyed
     destroySendQueue(queue);
     close(sockfd);
     return returnValue;
