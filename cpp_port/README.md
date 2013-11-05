@@ -9,11 +9,13 @@ represents the bounding area, allowing the detection area to be smaller then the
 Keys
 -----
 * ESC - close the program
-* r - recalibrate the bounding area
+* t - recalibrate the transformation area
+* m - recalibrate the mask area
 * f - flip the image horizontally
-* g - flip the image vertically
-* v - stop updating the image
+* v - flip the image vertically
+* s - stop updating the image
 * n - cycle noice reduction mode
+* w - toggle showing of warped area
 
 Noice reduction
 ---------------
@@ -26,6 +28,8 @@ There are currently three types of noice reduction. They appear in order
 
 Install instructions
 ====================
+make
+./main [server ip] [server port]
 
 On rasberry pi
 -------------
