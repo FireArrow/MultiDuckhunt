@@ -1,11 +1,11 @@
 var udp_listen_port = 10001;
-var debug_mode = false;
+var debug_mode = true;
 // latest state of detected light (format: 0.5,22.388 33.21,9993 ...)
 var current_state = "";
+var sentEmpty = false;
 
 var WebSocketServer = require("ws").Server
   , wss = new WebSocketServer({port: 9999})
-var ws_clients = [];
 
 // Listen for udp
 var dgram = require("dgram");
@@ -18,41 +18,41 @@ server.on( "listening",
 });
 console.log(server);
 
-function stdrecv() {
-	server.on("message",
-		function (msg, rinfo) {
-		if(debug_mode)
-			console.log("server got: " + msg + " from " + rinfo.address + ":" + rinfo.port);
-			current_state = ""+msg;
-	});
-}
 server.bind(udp_listen_port);
 
+var ws_error_callback = function(err) {
+    if(err != null)
+        console.log("Error when broadcasting data: %s", err);
+};
+wss.broadcast = function(data) {
+    for(var i in this.clients) {
+        this.clients[i].send(data, ws_error_callback);
+    }
+};
+
+server.on("message", function(msg, rinfo) {
+    if(debug_mode) {
+        console.log("server got: " + msg + " from " + rinfo.address + ":" + rinfo.port);
+    }
+    if(msg != "ndd") {
+        sentEmpty = false;
+        current_state = ""+msg;
+        wss.broadcast(current_state);
+    } else {
+        if( !sentEmpty ) {
+            current_state = "";
+            sentEmpty = true;
+            wss.broadcast(current_state);
+        }
+    }
+});
+
 wss.on("connection", function(ws) {
-	console.log("connection from: ", ws.upgradeReq.headers.origin);
-	ws.on("close", function() {
-		stdrecv();
-	});
-    var sentEmpty = false;
-	server.on("message", function(msg, rinfo) {
-		if(msg != "ndd"){
-            sentEmpty = false;
-			current_state = ""+msg;
-			var dots = [];
-			var listofcoordpairs = current_state.split( " " );
-			for(var key in listofcoordpairs) {
-				var coords = listofcoordpairs[key].split(",");
-				dots.push({x: parseFloat(coords[0]), y:parseFloat(coords[1])});
-			}
-			ws.send(JSON.stringify(dots), function(err){ if(err != null) stdrecv();});
-		} else {
-            if( !sentEmpty ) {
-			    current_state = "";
-			    ws.send("[]", function(err){ if(err != null) stdrecv();});
-                sentEmpty = true;
-            }
-		}
-	});
+    console.log("connection from: ", ws.upgradeReq.headers.origin);
+    ws.on("close", function() {
+        console.log("Connection from %s closed", ws.upgradeReq.headers.origin);
+    });
+    ws.send(current_state, ws_error_callback);
 });
 
 

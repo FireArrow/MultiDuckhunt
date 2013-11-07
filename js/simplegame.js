@@ -78,11 +78,13 @@ var makeGame = function() {
 		var hitCheck = function( x, y, s )
 		{
 			var hitcoords = _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
+            console.log("hitcoords: ", hitcoords);
 			for( var i in hitcoords )
 			{
 				var dx = hitcoords[i].x - x;
 				var dy = hitcoords[i].y - y;
 				var dist = Math.sqrt( dx*dx + dy*dy );
+                console.log("dist: ", dist);
 				if( dist < s )
 					return true;
 			}
@@ -111,6 +113,7 @@ var makeGame = function() {
 
 // When resetting game
 	var reset = function() {
+//        score = 0;
 		engine.clear(); // clear drawables
 		server.reload(); // reload ammo (not currently used)
 		start(); // start game
