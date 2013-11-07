@@ -1,5 +1,5 @@
 var udp_listen_port = 10001;
-var debug_mode = true;
+var debug_mode = false;
 // latest state of detected light (format: 0.5,22.388 33.21,9993 ...)
 var current_state = "";
 var sentEmpty = false;

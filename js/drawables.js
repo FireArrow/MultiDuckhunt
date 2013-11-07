@@ -68,8 +68,8 @@ var enemy = function( killed, intersectHit ){
 		islive = -1;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
-		position = new Vec([(Math.random()-0.5)*400,
-					(Math.random()-0.5)*400,
+		position = new Vec([(Math.random()-0.5)*3000,
+					(Math.random()-0.5)*3000,
 						Math.random()*100 + 10000]);
 		// reset starting velocity to be almost directed towards the camera
 		velocity = new Vec([(Math.random()-0.5)*0.7,

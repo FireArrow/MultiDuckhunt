@@ -111,10 +111,10 @@ var makeGame = function() {
 
 // When resetting game
 	var reset = function() {
-//        score = 0;
+        score = 0;
 		engine.clear(); // clear drawables
 		server.reload(); // reload ammo (not currently used)
-		start(); // start game
+		setTimeout( start, 1000 ); // start game
 	};
 
 	return {
