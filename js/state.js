@@ -14,7 +14,6 @@ var makeServerState = function()
                 for(var i in strPoints) {
                     var coords = strPoints[i].split(",");
                     var point = { x : parseFloat(coords[0]), y : parseFloat(coords[1]) };
-                    console.log(point);
                     _current_server_state.push(point);
                 }
             }

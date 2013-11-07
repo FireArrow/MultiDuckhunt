@@ -165,10 +165,8 @@ var makeCalibration = function( comms )
 			var transformed = [];
 			for( var i = 0; i < serverCoords.length; i++ )
 			{
-                console.log(serverCoords[i]);
 				transformed.push( this.transform( serverCoords[i] ) );
 			}
-            console.log(transformed);
 			return transformed;
 		}
 	};
