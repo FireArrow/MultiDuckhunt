@@ -1,7 +1,9 @@
 // This file holds a lot of things that can be drawn on screen.
 
+var showHitbox = undefined;
+
 // this is a vertical progress bar with white border, colored content, and a text label.
-var bar = function(name, position, size, color, getPercent ){
+var bar = function(name, position, size, color, getPercent ) {
 	return {
 		id: name,
 		draw: function( context, width, height, mark, keys ) {
@@ -30,6 +32,34 @@ var ending = function( score ) {
 			context.fillText( score + " points" , 300, height/2 + 50 );
 		}
 	};
+};
+
+var highscore = function( strHighScore ) {
+    return {
+        id: "highscorescreen",
+        draw: function( context, width, height, mark, keys ) {
+            context.fillStyle = "white";
+            context.font = "25px Consolas, monospace";
+            context.fillText(strHighScore, 30, height - 50);
+        }
+    };
+}
+
+var restartButton = function( isHitRect, restartFunction ) {
+    return {
+        id: "restartbutton",
+        draw: function( context, width, height, mark, keys ) {
+            context.fillStyle = "white";
+            context.font = "44px Consolas, monospace";
+            context.fillText( "RESTART", width / 2, height/2 + 200 );
+            context.strokeStyle = "white";
+            context.rect( width / 2 - 10, height/2 + 170, 200, 40);
+            context.stroke();
+            if( isHitRect(width / 2 - 10, height/2 + 170, 200, 40) ) {
+                restartFunction();
+            }
+        }
+    };
 };
 
 // this is the dot counter
@@ -104,17 +134,18 @@ var enemy = function( killed, intersectHit ){
 			// this switches between the two animation states.
 			state = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
 			// move our position a little bit, based on how much time has passed since the last frame
-			position = position.add( velocity.mul( delta ) );
+			position = position.add( velocity.mul( delta) );
 		},
 		draw: function( context, x, y, s, mark ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
-			if( _debug !== undefined )
+			if( showHitbox !== undefined )
 			{
 				// draw a little helper circle if we are debugging
 				// this b0rks on the death animation but whatev.
 				context.fillStyle = "rgba(0,255,0,100)";
 				context.beginPath();
-				context.arc( x, y, s/2, 0, Math.PI*2, true);
+                context.rect( x, y, s, s);
+//				context.arc( x, y, s/2, 0, Math.PI*2, true);
 				context.fill();
 			}
 
@@ -125,7 +156,7 @@ var enemy = function( killed, intersectHit ){
 				context.setTransform(1, 0, 0, 1, -s/2, -s/2); // reset the html canvas context transform matrix to move the image a bit
 				// this is done so that the middle of the image is on x,y
 				//then just draw the image
-				context.drawImage(_wSprite, imgoffsets[enemyid], state[0], imgwidths[enemyid],state[1], x,y,s,s);
+				context.drawImage(_wSprite, imgoffsets[enemyid], state[0], imgwidths[enemyid],state[1], x, y, s, s);
 			}
 			else // enemy is dead
 			{
@@ -141,7 +172,7 @@ var enemy = function( killed, intersectHit ){
 	};
 };
 
-// deprecated demo object, I think
+// demo object
 var demo = function( calibrator )
 {
 	return {
@@ -152,8 +183,7 @@ var demo = function( calibrator )
 			var coords = calibrator.getAll();
 			for( var i = 0; i < coords.length; i++ )
 			{
-				context.beginPath();
-				context.arc( coords[i].x, coords[i].y, 10, 0, Math.PI*2, true);
+				context.arc( coords[i].x, coords[i].y, 4, 0, Math.PI*2, true);
 				context.fill();
 			}
 		}

@@ -1,5 +1,5 @@
 // debug log drawable (should probably be moved to drawables.js, here for legacy reasons + im lazy)
-function makeLog()
+function makeLog(calibrator)
 {
 	var counter = 0;
 	var timestamp = new Date().getTime();
@@ -22,6 +22,13 @@ function makeLog()
 			context.fillStyle = "white";
 			context.font = "12px";
 			context.fillText( "FPS: " + Math.round(fps), 100, 40 );
+
+            var points = calibrator.getAll();
+            for(var i in points) {
+                context.fillStyle = "lightgreen";
+                context.arc(points[i].x, points[i].y, 2, 0, Math.PI*2, true);
+                context.fill();
+            }
 		}
 	};
 }
@@ -72,7 +79,7 @@ function makeEngine( canvas )
 	{
 		if( isPaused )
 		{
-			window.setTimeout(pl, 100); // in 100 ms, schedule this function to be called again.
+			window.setTimeout(animate, 300); // in 100 ms, schedule this function to be called again.
 		}
 		else
 		{
@@ -88,8 +95,8 @@ function makeEngine( canvas )
 		var context = canvas.getContext("2d");
 		var frameTimeStamp = new Date().getTime() - startTime; // mark is relative to when animation started
 		context.clearRect(0, 0, canvas.width, canvas.height); // clear drawing area for next frame
-		context.canvas.width  = window.innerWidth-10; // adjust for scrollbars
-		context.canvas.height = window.innerHeight-50; // we dont like scrollbars
+		context.canvas.width  = window.innerWidth - 10; // adjust for scrollbars
+		context.canvas.height = window.innerHeight - 50; // we dont like scrollbars
 		triggerWork(context, canvas.width, canvas.height, frameTimeStamp ); //call work function
 		if( enterPauseMode )
 			pauseLoop();

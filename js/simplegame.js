@@ -11,14 +11,13 @@ var makeGame = function() {
 	var finished = false;
 	
 	// feature: if clicking game over screen, the game will restart. No recalibration neccesary.
-	$("#example").mousedown(function(e){
-		if( finished )
-		{
-			finished=false;
-			engine.resume();
-			reset();
-		}
-	});
+//	$("#example").mousedown(function(e){
+//		if( finished )
+//		{
+//            restartGame();
+//		}
+//	});
+
 	if( _debug )
 	{
 		// if debug, replace server coordinates with mouse coordinates.
@@ -34,13 +33,57 @@ var makeGame = function() {
 		});
 	}
 
+    var restartGame = function() {
+			finished=false;
+			reset();
+			engine.resume();
+    };
+
+    var isHitRect = function(x, y, w, h) {
+        var hitcoords = calibrator.getAll();
+        for( var i in hitcoords ) {
+            if(
+                    hitcoords[i].x > x &&
+                    hitcoords[i].x < x+w &&
+                    hitcoords[i].y > y &&
+                    hitcoords[i].y < y+h
+              ) {
+                  return true;
+              }
+        }
+        return false;
+    };
+
 	// callback for when game ends (ie, when time or ammo runs out)
 	var finishedCallback = function() {
 		engine.clear(); // clear all drawables from engine
-		engine.add( ending( score ) ); // add the ending screen drawable to engine
 		engine.pause(); // since the ending screen doesnt change, we can also pause
+        server.reportScore( score, function(hs) {    
+            console.log("Highscore report callback");
+            var strHighScore = "Highscore: ";
+            if( score >= hs ) {
+                if( score > hs ) {
+                    strHighScore += score + " New highscore!";
+                }
+                else {
+                    strHighScore += score + " Tied for highscore";
+                }
+            }
+            else {
+                strHighScore += hs;
+            }
+            engine.add( highscore( strHighScore ) );
+        }); //Reports this score to the server, and get the current high-score back (not this score included)
+        
+        engine.add( ending( score ) ); // add the ending screen drawable to engine    
+        setTimeout( addRestartButton, 2000 );
 		finished=true; // flag that mouse-click should restart
 	};
+
+    var addRestartButton = function() {
+        server.clearState();
+        engine.add( restartButton( isHitRect, restartGame ) ); // add a button to restart the game with the laser
+    }
 
 // callback for when game starts, this is the MAIN GAME FUNCTION
 	var start = function() {
@@ -63,6 +106,25 @@ var makeGame = function() {
 		}));
 		var lastmark = 0;
 
+        // this callback controls if a current position and size contains a server coordinate 'hit'
+        // ie. is an enemy currently 'shot' by a laser?
+        // this will probably have to be changed so that enemies behind other enemies dont register as 'hit'
+        var hitCheck = function( x, y, s )
+        {
+//            x = x + s / 2;
+//            y = y + s / 2;
+            var hitcoords = _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
+            for( var i in hitcoords )
+            {
+                var dx = hitcoords[i].x - x;
+                var dy = hitcoords[i].y - y;
+                var dist = Math.sqrt( dx*dx + dy*dy );
+                if( dist < s )
+                    return true;
+            }
+            return false;
+        };
+
 		// this is for sorting the list of enemies
 		// we want stuff farther away from viewport to be draw first
 		// otherwise they will be on top of things closer to the camera, and that is b0rk
@@ -70,23 +132,6 @@ var makeGame = function() {
 			var v1 = b.pos().abs();
 			var v2 = a.pos().abs();
 			return v1 - v2;
-		};
-
-		// this callback controls if a current position and size contains a server coordinate 'hit'
-		// ie. is an enemy currently 'shot' by a laser?
-		// this will probably have to be changed so that enemies behind other enemies dont register as 'hit'
-		var hitCheck = function( x, y, s )
-		{
-			var hitcoords = _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
-			for( var i in hitcoords )
-			{
-				var dx = hitcoords[i].x - x;
-				var dy = hitcoords[i].y - y;
-				var dist = Math.sqrt( dx*dx + dy*dy );
-				if( dist < s )
-					return true;
-			}
-			return false;
 		};
 
 		// function that 'ticks' every enemy, sorts our makeshift z-buffer and then draws enemies
@@ -107,6 +152,7 @@ var makeGame = function() {
 
 		// add the enemy draw function to the engine
 		engine.add( {draw:enemies,id:"aoeu"} );
+        if(showHitbox) engine.add( makeLog(calibrator));
 	};
 
 // When resetting game

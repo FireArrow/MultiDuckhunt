@@ -1,8 +1,11 @@
 var udp_listen_port = 10001;
 var debug_mode = false;
-// latest state of detected light (format: 0.5,22.388 33.21,9993 ...)
+// latest state of detected light (format: 0.50,22.38 33.21,9993.23 ...)
 var current_state = "";
 var sentEmpty = false;
+
+
+var invadersHS = 0; //TODO Ladda detta från en fil
 
 var WebSocketServer = require("ws").Server
   , wss = new WebSocketServer({port: 9999})
@@ -52,8 +55,24 @@ wss.on("connection", function(ws) {
     ws.on("close", function() {
         console.log("Connection from %s closed", ws.upgradeReq.headers.origin);
     });
+
+    ws.on("message", function(data) {
+        console.log("Got message: " + data);
+        var parts = data.split(":");
+        switch(parts[0]) {
+            case "invadersHS":
+                ws.send("hs:" + invadersHS);
+                var score = parseInt(parts[1]);
+                if(score > invadersHS) {
+                    invadersHS = score;
+                }
+                break;
+        }
+    });
+
     ws.send(current_state, ws_error_callback);
 });
+
 
 
 // web server paste

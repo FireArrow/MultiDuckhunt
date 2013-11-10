@@ -131,13 +131,13 @@ var makeCalibration = function( comms )
 
     		// Transform x component linearily onto screen based on the two calibration reports
             // Top left corner to bottom right.
-    		var base_TLBR_X = coords.x - (calPointTopLeft.x + calPointBottomLeft.x) / 2;
-    		var delta_TLBR_X = (calPointTopRight.x + calPointBottomRight.x) / 2 - (calPointTopLeft.x + calPointBottomLeft.x) / 2;
+    		var base_TLBR_X = coords.x - calPointTopLeft.x;
+    		var delta_TLBR_X = calPointBottomRight.x - calPointBottomLeft.x;
     		var x1 = ( base_TLBR_X / delta_TLBR_X ) * _current_coords.x;
 
     		// transform y coordinate in the same way
-    		var base_TLBR_Y = coords.y - (calPointTopLeft.y + calPointTopRight.y) / 2;
-    		var delta_TLBR_Y = (calPointBottomLeft.y + calPointBottomRight.y) / 2 - (calPointTopLeft.y + calPointTopRight.y) / 2;
+    		var base_TLBR_Y = coords.y - calPointTopLeft.y;
+    		var delta_TLBR_Y = calPointBottomRight.y - calPointTopLeft.y;
     		var y1 = ( base_TLBR_Y / delta_TLBR_Y ) * _current_coords.y;
 
           //Everything gets a bit upside-down in top right bottom left
@@ -146,15 +146,15 @@ var makeCalibration = function( comms )
 //    		var base_TRBL_X = coords.x - calPointBottomLeft.x;
 //       		var delta_TRBL_X = calPointTopRight.x - calPointBottomLeft.x;
 //    		var x2 = ( base_TRBL_X / delta_TRBL_X ) * _current_coords.x;
-
-    		// transform y coordinate in the same way
+//
+//    		// transform y coordinate in the same way
 //    		var base_TRBL_Y = coords.y - calPointTopRight.y;
 //    		var delta_TRBL_Y = calPointBottomLeft.y - calPointTopRight.y;
 //    		var y2 = ( base_TRBL_Y / delta_TRBL_Y ) * _current_coords.y;
-
+//
 //            var meanX = ( x1 + x2 ) / 2;
 //            var meanY = ( y1 + y2 ) / 2;
-
+//
 //			return { x: meanX, y: meanY };
 			return { x: x1, y: y1 };
 		},
