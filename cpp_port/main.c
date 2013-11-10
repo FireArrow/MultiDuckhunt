@@ -18,6 +18,9 @@
 #define DEFAULT_SERVER_ADDRESS "127.0.0.1"
 #define DEFAULT_SERVER_PORT 10001
 
+#define POINT_SIZE 16
+#define SEND_BUF_SIZE POINT_SIZE * 100
+
 // States
 #define GRAB_DOTS 1
 #define SELECT_MASK 2
@@ -153,12 +156,12 @@ void sendQueue(int sockfd, SendQueue *q)
 {
     static char sentEmpty = 0;
     int ret, len = 0;
-    char buf[10240];
+    char buf[SEND_BUF_SIZE];
     buf[0] = '\0';
 
     // Skip first entry
     q = q->next;
-    while (q != NULL) { //TODO buffer overflow here? segfaults when sending very many dots
+    while (q != NULL && SEND_BUF_SIZE - strlen(buf) >= POINT_SIZE) { //One point is estimated to be at most 16 byte. "xxxx.xx,yyyy.yy "
         ret = snprintf(&buf[len], sizeof(buf) - strlen(buf), "%.2f,%.2f ", q->point[0], q->point[1]);
         if (ret < 0) {
             printf("Foo\n");
@@ -347,7 +350,7 @@ int run(const char *serverAddress, const int serverPort, char headless) {
 
 //  Capture from the highest connected device number. This is a really
 //  bad solution, but it'll have to do for now. TODO Make this better
-    for( i = 0; i < 5; ++i ) {
+    for( i = 20; i >= 0; --i ) {
         capture = cvCaptureFromCAM(i);    
         if (capture != NULL) {
             break;
