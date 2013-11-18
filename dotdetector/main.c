@@ -19,14 +19,14 @@
 #define DEFAULT_SERVER_PORT 10001
 
 #define POINT_SIZE 16
-#define SEND_BUF_SIZE POINT_SIZE * 100
+#define SEND_BUF_SIZE 1472 // Max payload of a single UDP package with MTU 1500 (the common default MTU)
 
 // States
 #define GRAB_DOTS 1
 #define SELECT_MASK 2
 #define SELECT_TRANSFORM 3
 
-// Cornors of a bounding box
+// Corners of a bounding box
 //
 // 0 ------- 1
 // |        /
@@ -161,7 +161,7 @@ void sendQueue(int sockfd, SendQueue *q)
 
     // Skip first entry
     q = q->next;
-    while (q != NULL && SEND_BUF_SIZE - strlen(buf) >= POINT_SIZE) { //One point is estimated to be at most 16 byte. "xxxx.xx,yyyy.yy "
+    while (q != NULL && (SEND_BUF_SIZE - strlen(buf)) >= POINT_SIZE) { //One point is estimated to be at most 16 byte. "xxxx.xx,yyyy.yy "
         ret = snprintf(&buf[len], sizeof(buf) - strlen(buf), "%.2f,%.2f ", q->point[0], q->point[1]);
         if (ret < 0) {
             printf("Foo\n");
@@ -423,13 +423,17 @@ int run(const char *serverAddress, const int serverPort, char headless) {
     DD_transform_to.topLeft.y = 0;
 
     DD_transform_to.topRight.x = grabbedImage->width-1;
+//    DD_transform_to.topRight.x = 1000;
     DD_transform_to.topRight.y = 0;
 
     DD_transform_to.bottomLeft.x = 0;
     DD_transform_to.bottomLeft.y = grabbedImage->height-1;
+ //   DD_transform_to.bottomLeft.y = 1000;
 
     DD_transform_to.bottomRight.x = grabbedImage->width-1;
     DD_transform_to.bottomRight.y = grabbedImage->height-1;
+ //   DD_transform_to.bottomRight.x = 1000;
+ //   DD_transform_to.bottomRight.y = 1000;
     
     calculateTransformationMatrix(&DD_transform, &DD_transform_to, transMat);
 
