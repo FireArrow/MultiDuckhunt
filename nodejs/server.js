@@ -1,6 +1,6 @@
 var udp_listen_port = 10001;
 var debug_mode = false;
-// latest state of detected light (format: 0.50,22.38 33.21,9993.23 ...)
+// latest state of detected light (format: 1234567#0.50,22.38 33.21,9993.23 ...) where "1234567" is the sequence number
 var current_state = "";
 var sentEmpty = false;
 

@@ -150,14 +150,19 @@ void addPointToSendQueue(const float p[2], SendQueue *q)
     q->next = newEntry;
 }
 
-// Sends the send queue over the network in text format "x.xx,y.yy x.xx,y.yy"
+// Sends the send queue over the network in text format "sss#x.xx,y.yy x.xx,y.yy"
 // Sends "ndd" if there are no dots detected
 void sendQueue(int sockfd, SendQueue *q)
 {
+    static unsigned long long seq = 0; //Global sequence number. Will simply roll around should it hit max. Deal with it on client side
     static char sentEmpty = 0;
-    int ret, len = 0;
+    int ret, len = 0, seqLen = 0;
     char buf[SEND_BUF_SIZE];
     buf[0] = '\0';
+
+    // Add sequence number to package
+    seqLen = snprintf( &buf[len], sizeof(buf) - strlen(buf), "%llu#", seq++ );
+    len = seqLen;
 
     // Skip first entry
     q = q->next;
@@ -171,7 +176,7 @@ void sendQueue(int sockfd, SendQueue *q)
 
         q = q->next;
     }
-    if(len > 0) {
+    if(len > seqLen) {
         buf[--len] = '\0'; //Remove the trailing space
 
         // Resetting empty queue counter (see below for explanation)

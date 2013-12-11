@@ -17,9 +17,11 @@ var makeServerState = function()
                     highscore_callback(highscore);
                 }
                 else { //This is a points message
-                    var strPoints = data.data.split(" ");
+                    console.log(data.data);
+                    var data = String(data.data).split("#");
+                    var strPoints = String(data[1]).split(" ");
                     for(var i in strPoints) {
-                        var coords = strPoints[i].split(",");
+                        var coords = String(strPoints[i]).split(",");
                         var point = { x : parseFloat(coords[0]), y : parseFloat(coords[1]) };
                         _current_server_state.push(point);
                     }
