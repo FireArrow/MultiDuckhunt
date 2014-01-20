@@ -21,7 +21,7 @@ An easier way to do it is to import the whole thing into Eclipse and run it from
 
 C implementation
 --------------
-See README.md in the dotdetector folder
+*MOVED* - Now resides in its own repository. https://github.com/FireArrow/dotdetector
 
 
 Web server
