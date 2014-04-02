@@ -19,16 +19,6 @@ var calibrateAction = function( state, image, finished )
 				transition_mark = mark;
 			}
 		}
-		else if( c.getState() === "topright" )
-		{
-			// draw an image in the top right corner
-			context.drawImage(image, width-20, -20,40,40);
-			if( keys.length > 0 && transition_mark + 1000 < mark )
-			{
-				c.reportTopRight();
-				transition_mark = mark;
-			}
-		}
 		else if( c.getState() === "bottomright" )
 		{
 			// draw an image in the bottom right corner
@@ -37,15 +27,6 @@ var calibrateAction = function( state, image, finished )
 			{
 				c.reportBottomRight();
 				transition_mark = mark;
-			}
-		}
-		else if( c.getState() === "bottomleft" )
-		{
-			// draw an image in the bottom left corner
-			context.drawImage(image, -20, height-20,40,40);
-			if( keys.length > 0 && transition_mark + 1000 < mark )
-			{
-				c.reportBottomLeft();
 			}
 		}
 		else if( c.getState() === "ready" )
@@ -69,8 +50,9 @@ var makeCalibration = function( comms )
 	
 	var calPointTopLeft = undefined; //Top left bottom right base
     var calPointBottomRight = undefined; //Top left bottom right scale
-    var calPointTopRight = undefined; //Top right bottom left base
-	var calPointBottomLeft = undefined; //Top right bottom left scale
+
+    var scaleX = undefined; // To replace static calculations in transform
+    var scaleY = undefined; // not yet implemented
 	
 	return {
 		reportTopLeft: function(current_width,current_height){
@@ -80,17 +62,8 @@ var makeCalibration = function( comms )
 			if( coords.length > 0 ) // guard for badness from server
 			{
 				_current_coords = {x:current_width,y:current_height}; // save screen size so we know where to print the other marks
-				_state = "topright";
-				calPointTopLeft = coords[0];
-			}
-		},
-		reportTopRight: function(){
-			// user signals that second mark matches
-			var coords = comms();
-			if( coords.length > 0 )
-			{
 				_state = "bottomright";
-				calPointTopRight = coords[0];
+				calPointTopLeft = coords[0];
 			}
 		},
 		reportBottomRight: function(){
@@ -98,17 +71,8 @@ var makeCalibration = function( comms )
 			var coords = comms();
 			if( coords.length > 0 )
 			{
-				_state = "bottomleft";
-				calPointBottomRight = coords[0];
-			}
-		},
-		reportBottomLeft: function(){
-			// user signals that second mark matches
-			var coords = comms();
-			if( coords.length > 0 )
-			{
 				_state = "ready";
-				calPointBottomLeft = coords[0];
+				calPointBottomRight = coords[0];
 			}
 		},
 
@@ -132,7 +96,7 @@ var makeCalibration = function( comms )
     		// Transform x component linearily onto screen based on the two calibration reports
             // Top left corner to bottom right.
     		var base_TLBR_X = coords.x - calPointTopLeft.x;
-    		var delta_TLBR_X = calPointBottomRight.x - calPointBottomLeft.x;
+    		var delta_TLBR_X = calPointBottomRight.x - calPointTopLeft.x;
     		var x1 = ( base_TLBR_X / delta_TLBR_X ) * _current_coords.x;
 
     		// transform y coordinate in the same way
@@ -156,6 +120,7 @@ var makeCalibration = function( comms )
 //            var meanY = ( y1 + y2 ) / 2;
 //
 //			return { x: meanX, y: meanY };
+            console.log( "x:" + x1 + "  y:" + y1 );
 			return { x: x1, y: y1 };
 		},
 
