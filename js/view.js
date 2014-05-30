@@ -5,14 +5,14 @@ var makeView = function( starting_position, starting_updirection, starting_right
 	var u = starting_updirection || new Vec([1,0,0]).unit();
 	var v = starting_rightdirection || new Vec([0,1,0]).unit();
 	var n = u.cross( v );
-	var fovx = 1;
-	var fovy = 1;
+	var fovx = .5;
+	var fovy = .5;
 
 	return {
 		draw: function( context, w, h, obj, mark ) { // draw: draw obj on context which has width w, height h
 			var p = obj.pos().sub( pos ); // p is vector pointing from viewport to object
 			var ndist = p.dot( n ); // project p onto the viewport normal to get how far away object is along the axis
-			if( ndist > -1 * w / 2 ) // if object should be drawn, (i.e. if distance is positive)
+			if( ndist > 0 ) // if object should be drawn, (i.e. if distance is positive)
 			{
 				var x = p.dot( u ); // project p onto x and y viewport axises
 				var y = p.dot( v ); // these are the actual coordinates in the vector space of object as viewed from viewport

@@ -89,7 +89,9 @@ var enemy = function( killed, intersectHit, debugmode ){
 	var position = new Vec(); // our position in a three dimensional vector room
 	var velocity = new Vec(); // our velocity in a three dimensional vector room
 	var sidevelocity = new Vec();
+	var viewporttarget = undefined;
 	var health = 100;
+	var armor = 0;
 	var timeoffset = 0;
 	
 	
@@ -99,16 +101,18 @@ var enemy = function( killed, intersectHit, debugmode ){
 		enemyid = Math.floor( Math.random() * 3 );
 		islive = -1;
 		health=100;
+		viewporttarget = undefined;
+		armor = Math.random()*6+6;
 		timeoffset = Math.random()*1500;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
 		position = new Vec([(Math.random()-0.5)*800,
 					(Math.random()-0.5)*800,
-						Math.random()*1000 + 1000]);
+						Math.random()*6000 + 3000]);
 		// reset starting velocity to be almost directed towards the camera
-		velocity = new Vec([(Math.random()-0.5)*0.07,
-						(Math.random()-0.5)*0.07,
-						(-1)*(0.4+(Math.random()*0.1))]);
+		velocity = new Vec([(Math.random()-0.5)*0.1,
+						(Math.random()-0.5)*0.1,
+						(-1)*(0.8+(Math.random()*0.1))]);
 		sidevelocity = new Vec([
 				velocity.x()*5,
 				 velocity.y()*5,
@@ -127,7 +131,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 				 velocity.y()*10,
 				 0]);
 		}
-		health -= 5;
+		health -= armor;
 	};
 	
 	var selectSprite = function(){
@@ -144,6 +148,17 @@ var enemy = function( killed, intersectHit, debugmode ){
 			return _2Sprite;
 
 		return _1Sprite;
+	};
+	
+	var makeDashVector = function()
+	{
+		var n = new Vec([
+			Math.random()*100 - 50,
+			Math.random()*100 - 50,
+						Math.random()*100 + 500]);
+		var target = n.sub( position );
+		var norm = target.unit();
+		return norm.mul( 4 + Math.random()*2 );
 	};
 
 	return {
@@ -162,14 +177,20 @@ var enemy = function( killed, intersectHit, debugmode ){
 			// this switches between the two animation states.
 			state = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
 			// move our position a little bit, based on how much time has passed since the last frame
-			if( Math.floor( (mark+timeoffset) / 1000 ) % 3 == 0 )
+			if( position.z() > 700 && position.z() < 1000 )
+			{
+				if( viewporttarget === undefined )
+					viewporttarget = makeDashVector();
+				position = position.add( viewporttarget.mul( delta ) );
+			}
+			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 == 0 )
 				position = position.add( velocity.mul( delta ) );
 			else
 				position = position.add( sidevelocity.mul( delta ) );
 		},
 		draw: function( context, x, y, s, mark ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
-			if( position.z() > 1000 )
+			if( position.z() > 3000 )
 				return; // clipspace
 			var sprite = selectSprite();
 			if( islive === -1 )//if this enemy still lives
