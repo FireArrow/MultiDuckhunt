@@ -1,7 +1,5 @@
 var makeCoordinateTransformer = function( comms )
 {
-	var size = {x:0,y:0};
-
     // The calibration works by taking the mean of two linear transformations, one for each axis.
 	var calPointTopLeft = {x:0,y:0}; 
     var calPointBottomRight = {x:640,y:480}; // this should be the resolution of the projector
@@ -18,12 +16,12 @@ var makeCoordinateTransformer = function( comms )
             // Top left corner to bottom right.
     		var base_TLBR_X = coords.x - calPointTopLeft.x;
     		var delta_TLBR_X = calPointBottomRight.x - calPointTopLeft.x;
-    		var x1 = ( base_TLBR_X / delta_TLBR_X ) *size;
+    		var x1 = ( base_TLBR_X / delta_TLBR_X ) *window.innerWidth;
 
     		// transform y coordinate in the same way
     		var base_TLBR_Y = coords.y - calPointTopLeft.y;
     		var delta_TLBR_Y = calPointBottomRight.y - calPointTopLeft.y;
-    		var y1 = ( base_TLBR_Y / delta_TLBR_Y ) *size;
+    		var y1 = ( base_TLBR_Y / delta_TLBR_Y ) *window.innerHeight;
 
 //            console.log( "x:" + x1 + "  y:" + y1 );
 			return { x: x1, y: y1 };
@@ -38,8 +36,6 @@ var makeCoordinateTransformer = function( comms )
 				transformed.push( this.transform( serverCoords[i] ) );
 			}
 			return transformed;
-		},
-        windowsize: function(s){
-        size=s;}
+		}
 	};
 };
