@@ -5,7 +5,6 @@
 		body{background:black;color:white;}
 		a{color:black}
 	</style>
-	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 	<script type="text/javascript" src="vec.js"></script>
 	<script type="text/javascript" src="engine.js"></script>
 	<script type="text/javascript" src="calibrator.js"></script>
@@ -16,10 +15,12 @@
 
 	<script type="text/javascript">
 	/* load images */
-	var _X = new Image();
-	_X.src = "X.png";
-	var _wSprite = new Image();
-	_wSprite.src = "si_white_full.png";
+	
+	var _gSprite = new Image();
+	_gSprite.src = "si_gray_full.png";
+	var _pSprite = new Image();
+	_pSprite.src = "si_pink_full.png";
+	
 	var _rSprite = new Image();
 	_rSprite.src = "si_red_full.png";
 	</script>
@@ -27,8 +28,11 @@
 	<script type="text/javascript">
 		window.onload = function(){
 			var game = makeGame();
-			game.recalibrate();
+			if( window.location.hash === "#debug" )
+				game.setDebug();
+			game.start();
 		};
+		
 	</script>
 </head>
 <body style="height: 100%;padding:0;margin:0">
