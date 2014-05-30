@@ -15,22 +15,26 @@
 
 	<script type="text/javascript">
 	/* load images */
-	
 	var _gSprite = new Image();
 	_gSprite.src = "si_gray_full.png";
 	var _pSprite = new Image();
 	_pSprite.src = "si_pink_full.png";
-	
 	var _rSprite = new Image();
 	_rSprite.src = "si_red_full.png";
 	</script>
 
 	<script type="text/javascript">
 		window.onload = function(){
-			var game = makeGame();
 			if( window.location.hash === "#debug" )
-				game.setDebug();
-			game.start();
+			{
+				var game = makeGame(true);
+				game.start();
+			}
+			else
+			{
+				var game = makeGame();
+				game.start();
+			}
 		};
 		
 	</script>

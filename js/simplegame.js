@@ -1,5 +1,4 @@
-var makeGame = function() {
-	var _debug;
+var makeGame = function(_debug) {
 	var server = makeServerState();
 	var engine = makeEngine(document.getElementById("example"));
 	engine.start();
@@ -8,27 +7,19 @@ var makeGame = function() {
 	var score = 0;
 	var mousehit = [];
 	var finished = false;
-	
-	// feature: if clicking game over screen, the game will restart. No recalibration neccesary.
-//	$("#example").mousedown(function(e){
-//		if( finished )
-//		{
-//            restartGame();
-//		}
-//	});
 
+	// if debug, replace server coordinates with mouse coordinates.
 	if( _debug !== undefined )
 	{
-		// if debug, replace server coordinates with mouse coordinates.
-		$("#example").mousedown(function(e){
-			var x = e.pageX - this.offsetLeft;
-			var y = e.pageY - this.offsetTop;
+		var canvasElement = document.getElementById("example");
+		canvasElement.addEventListener("mousedown", function(e){
+			var x = e.x - this.offsetLeft;
+			var y = e.y - this.offsetTop;
 			mousehit = [{x:x,y:y}];
-		//	engine.resume();
-		});
-		$("#example").mouseup(function(){
+		}, false);
+		canvasElement.addEventListener("mouseup", function(){
 			mousehit=[];
-		});
+		},false);
 	}
 
     var restartGame = function() {
@@ -144,7 +135,7 @@ var makeGame = function() {
 
 		// add the enemy draw function to the engine
 		engine.add( {draw:enemies,id:"aoeu"} );
-        if(showHitbox) engine.add( makeLog(calibrator));
+        if(_debug) engine.add( makeLog(calibrator));
 	};
 
 // When resetting game
@@ -164,9 +155,6 @@ var makeGame = function() {
 		},
 		
 		// just in case
-		reset: reset,
-		setDebug: function(){
-			_debug = true;
-		}		
+		reset: reset
 	}
 };

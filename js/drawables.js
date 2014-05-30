@@ -103,7 +103,7 @@ var enemy = function( killed, intersectHit, _debug ){
 		// reset starting velocity to be almost directed towards the camera
 		velocity = new Vec([(Math.random()-0.5)*0.7,
 						(Math.random()-0.5)*0.7,
-						(-1)*(4+Math.random())]);
+						(-1)*(1+Math.random())]);
 		};
 	reset();
 	var wasHit = function(mark){
@@ -118,7 +118,7 @@ var enemy = function( killed, intersectHit, _debug ){
 				 velocity.y()*10,
 				 velocity.z()/10]);
 		}
-		health -= 50;
+		health -= 5;
 	};
 
 	return {
@@ -141,16 +141,6 @@ var enemy = function( killed, intersectHit, _debug ){
 		},
 		draw: function( context, x, y, s, mark ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
-			if( _debug !== undefined && islive === -1 )
-			{
-				// draw a little helper circle if we are debugging
-				// this b0rks on the death animation but whatev.
-				context.fillStyle = "rgba(0,255,0,100)";
-				context.beginPath();
-                context.rect( x, y, s, s);
-//				context.arc( x, y, s/2, 0, Math.PI*2, true);
-				context.fill();
-			}
 			
 			var sprite = _gSprite;
 			if( islive !== -1 )
@@ -166,6 +156,16 @@ var enemy = function( killed, intersectHit, _debug ){
 			{
 				if( intersectHit( x, y, s ) ) // if this enemy is currently hit by a laser
 					wasHit( mark ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
+				if( _debug !== undefined )
+				{
+					// draw a little helper circle if we are debugging
+					// this b0rks on the death animation but whatev.
+				context.setTransform(1, 0, 0, 1, 0,0); // reset the html canvas context transform matrix to move the image a bit
+					context.fillStyle = "rgba(0,255,0,100)";
+					context.beginPath();
+					context.arc( x, y, s/2, 0, Math.PI*2, true);
+					context.fill();
+				}
 				context.setTransform(1, 0, 0, 1, -s/2, -s/2); // reset the html canvas context transform matrix to move the image a bit
 				// this is done so that the middle of the image is on x,y
 				//then just draw the image
