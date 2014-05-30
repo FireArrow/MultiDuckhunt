@@ -129,6 +129,22 @@ var enemy = function( killed, intersectHit, debugmode ){
 		}
 		health -= 5;
 	};
+	
+	var selectSprite = function(){
+		if( islive !== -1 )
+			return _deadSprite;
+			
+		if( health <= 60 )
+			return _5Sprite;
+		if( health <= 70 )
+			return _4Sprite;
+		if( health <= 80 )
+			return _3Sprite;
+		if( health <= 90 )
+			return _2Sprite;
+
+		return _1Sprite;
+	};
 
 	return {
 		id:"enemy",
@@ -155,16 +171,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
 			if( position.z() > 9000 )
 				return; // clipspace
-			var sprite = _gSprite;
-			if( islive !== -1 )
-			{
-				sprite = _rSprite;
-			}
-			else if( health <= 75 )
-			{
-				sprite = _pSprite;
-			}
-
+			var sprite = selectSprite();
 			if( islive === -1 )//if this enemy still lives
 			{
 				if( intersectHit( x, y, s ) ) // if this enemy is currently hit by a laser
