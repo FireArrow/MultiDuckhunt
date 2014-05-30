@@ -1,7 +1,5 @@
 // This file holds a lot of things that can be drawn on screen.
 
-var showHitbox = undefined;
-
 // this is a vertical progress bar with white border, colored content, and a text label.
 var bar = function(name, position, size, color, getPercent ) {
 	return {
@@ -76,7 +74,7 @@ var dotcounter = function( counter ) {
 
 // this is one enemy
 // this class is not added directly to the rendering engine, it should first go through the game engine
-var enemy = function( killed, intersectHit ){
+var enemy = function( killed, intersectHit, _debug ){
 	//params:
 	// killed, callback function, we call killed when this enemy is killed
 	// intersectHit, callbackfunction, we use this to check if this enemy is currently hit by laser
@@ -90,12 +88,13 @@ var enemy = function( killed, intersectHit ){
 	var _size = 100;
 	var position = new Vec(); // our position in a three dimensional vector room
 	var velocity = new Vec(); // our velocity in a three dimensional vector room
-	
+	var health = 100;
 	
 	// function that resets all values
 	var reset = function(){
 		enemyid = Math.floor( Math.random() * 3 );
 		islive = -1;
+		health=100;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
 		position = new Vec([(Math.random()-0.5)*3000,
@@ -109,13 +108,17 @@ var enemy = function( killed, intersectHit ){
 	reset();
 	var wasHit = function(mark){
 		// what to do when we are hit
-		killed();
-		islive = mark;
-		// transform velocity to be more toward the side than toward the camera
-		velocity = new Vec([
-			velocity.x()*10,
-			 velocity.y()*10,
-			 velocity.z()/10]);
+		if( health <= 0 )
+		{
+			killed();
+			islive = mark;
+			// transform velocity to be more toward the side than toward the camera
+			velocity = new Vec([
+				velocity.x()*10,
+				 velocity.y()*10,
+				 velocity.z()/10]);
+		}
+		health -= 50;
 	};
 
 	return {
@@ -138,7 +141,7 @@ var enemy = function( killed, intersectHit ){
 		},
 		draw: function( context, x, y, s, mark ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
-			if( showHitbox !== undefined )
+			if( _debug !== undefined && islive === -1 )
 			{
 				// draw a little helper circle if we are debugging
 				// this b0rks on the death animation but whatev.
@@ -148,15 +151,25 @@ var enemy = function( killed, intersectHit ){
 //				context.arc( x, y, s/2, 0, Math.PI*2, true);
 				context.fill();
 			}
+			
+			var sprite = _gSprite;
+			if( islive !== -1 )
+			{
+				sprite = _rSprite;
+			}
+			else if( health <= 75 )
+			{
+				sprite = _pSprite;
+			}
 
-			if( islive == -1 )//if this enemy still lives
+			if( islive === -1 )//if this enemy still lives
 			{
 				if( intersectHit( x, y, s ) ) // if this enemy is currently hit by a laser
 					wasHit( mark ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
 				context.setTransform(1, 0, 0, 1, -s/2, -s/2); // reset the html canvas context transform matrix to move the image a bit
 				// this is done so that the middle of the image is on x,y
 				//then just draw the image
-				context.drawImage(_wSprite, imgoffsets[enemyid], state[0], imgwidths[enemyid],state[1], x, y, s, s);
+				context.drawImage(sprite, imgoffsets[enemyid], state[0], imgwidths[enemyid],state[1], x, y, s, s);
 			}
 			else // enemy is dead
 			{
@@ -166,7 +179,7 @@ var enemy = function( killed, intersectHit ){
 				var cos = Math.cos(angle);
 				context.setTransform( cos, sin, -sin, cos, x, y ); // set transform matrix to rotate image and move it to x,y
 				// and draw the image, remeber to offset half the image width and height so that it is drawn with the middle in x,y
-				context.drawImage(_rSprite, imgoffsets[enemyid], state[0], imgwidths[enemyid],state[1], -s/2,-s/2,s,s);
+				context.drawImage(sprite, imgoffsets[enemyid], state[0], imgwidths[enemyid],state[1], -s/2,-s/2,s,s);
 			}
 		}
 	};
