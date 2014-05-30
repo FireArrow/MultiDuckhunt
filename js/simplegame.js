@@ -96,7 +96,7 @@ var makeGame = function(_debug) {
         {
 //            x = x + s / 2;
 //            y = y + s / 2;
-            var hitcoords = _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
+            var hitcoords =  calibrator.getAll(); // gets all transformed screen coordinates
             for( var i in hitcoords )
             {
                 var dx = hitcoords[i].x - x;
