@@ -1,15 +1,16 @@
-var makeGame = function(_debug) {
-	var server = makeServerState();
+var makeGame = function(debugmode) {
+	var _debug = debugmode || false;
+	var server = makeServerState(_debug);
 	var engine = makeEngine(document.getElementById("example"));
 	engine.start();
 	var calibrator = undefined;
-	var maxTime = 50*1000;
+	var maxTime = 45*1000;
 	var score = 0;
 	var mousehit = [];
 	var finished = false;
 
 	// if debug, replace server coordinates with mouse coordinates.
-	if( _debug !== undefined )
+	if( _debug )
 	{
 		var canvasElement = document.getElementById("example");
 		canvasElement.addEventListener("mousedown", function(e){
@@ -96,13 +97,13 @@ var makeGame = function(_debug) {
         {
 //            x = x + s / 2;
 //            y = y + s / 2;
-            var hitcoords =  calibrator.getAll(); // gets all transformed screen coordinates
+            var hitcoords =  _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
             for( var i in hitcoords )
             {
                 var dx = hitcoords[i].x - x;
                 var dy = hitcoords[i].y - y;
-                var dist = Math.sqrt( dx*dx + dy*dy );
-                if( dist < s )
+                var distsquaresum =  dx*dx + dy*dy;
+                if( distsquaresum < s*s )
                     return true;
             }
             return false;
@@ -127,8 +128,8 @@ var makeGame = function(_debug) {
 			lastmark = mark;
 		};
 		
-		// initialize 10 enemies and add them to the draw-buffer
-		for( var i = 0; i < 10; i++ )
+		// initialize enemies and add them to the draw-buffer
+		for( var i = 0; i < 50; i++ )
 		{
 			drawables.push( enemy( function(){score++;}, hitCheck, _debug ) );
 		}

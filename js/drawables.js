@@ -48,10 +48,10 @@ var restartButton = function( isHitRect, restartFunction ) {
         id: "restartbutton",
         draw: function( context, width, height, mark, keys ) {
             context.fillStyle = "white";
-            context.font = "44px Consolas, monospace";
-            context.fillText( "RESTART", width / 2, height/2 + 200 );
+            context.font = "36px Consolas, monospace";
+            context.fillText( "RESTART", 300, height/2 + 200 );
             context.strokeStyle = "white";
-            context.rect( width / 2 - 10, height/2 + 170, 200, 40);
+            context.rect( 295, height/2 + 170, 200, 40);
             context.stroke();
             if( isHitRect(width / 2 - 10, height/2 + 170, 200, 40) ) {
                 restartFunction();
@@ -74,7 +74,7 @@ var dotcounter = function( counter ) {
 
 // this is one enemy
 // this class is not added directly to the rendering engine, it should first go through the game engine
-var enemy = function( killed, intersectHit, _debug ){
+var enemy = function( killed, intersectHit, debugmode ){
 	//params:
 	// killed, callback function, we call killed when this enemy is killed
 	// intersectHit, callbackfunction, we use this to check if this enemy is currently hit by laser
@@ -88,22 +88,31 @@ var enemy = function( killed, intersectHit, _debug ){
 	var _size = 100;
 	var position = new Vec(); // our position in a three dimensional vector room
 	var velocity = new Vec(); // our velocity in a three dimensional vector room
+	var sidevelocity = new Vec();
 	var health = 100;
+	var timeoffset = 0;
+	
+	
 	
 	// function that resets all values
 	var reset = function(){
 		enemyid = Math.floor( Math.random() * 3 );
 		islive = -1;
 		health=100;
+		timeoffset = Math.random()*1500;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
 		position = new Vec([(Math.random()-0.5)*3000,
 					(Math.random()-0.5)*3000,
-						Math.random()*100 + 10000]);
+						Math.random()*9000 + 9000]);
 		// reset starting velocity to be almost directed towards the camera
 		velocity = new Vec([(Math.random()-0.5)*0.7,
 						(Math.random()-0.5)*0.7,
-						(-1)*(1+Math.random())]);
+						(-1)*(4+Math.random())]);
+		sidevelocity = new Vec([
+				velocity.x()*5,
+				 velocity.y()*5,
+				 velocity.z()*0.01]);
 		};
 	reset();
 	var wasHit = function(mark){
@@ -116,7 +125,7 @@ var enemy = function( killed, intersectHit, _debug ){
 			velocity = new Vec([
 				velocity.x()*10,
 				 velocity.y()*10,
-				 velocity.z()/10]);
+				 0]);
 		}
 		health -= 5;
 	};
@@ -127,21 +136,25 @@ var enemy = function( killed, intersectHit, _debug ){
 		size: function(){ return _size; },
 		tick: function( keys, mark, delta ) {
 			// our game engine calls this one once for every enemy once per frame, before anything is drawn
-			if( islive !== -1 && mark-islive > 2000 || position.z() < -10000 )
+			if( islive !== -1 && mark-islive > 2000 || position.z() < -2000 )
 			{
 				//if we are dead, and have been dead for a little while
 				// or if we are way past the viewport
-				reset();
+				reset(mark);
 			}
 			
 			// this switches between the two animation states.
 			state = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
 			// move our position a little bit, based on how much time has passed since the last frame
-			position = position.add( velocity.mul( delta) );
+			if( Math.floor( (mark+timeoffset) / 1000 ) % 3 == 0 )
+				position = position.add( velocity.mul( delta ) );
+			else
+				position = position.add( sidevelocity.mul( delta ) );
 		},
 		draw: function( context, x, y, s, mark ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
-			
+			if( position.z() > 9000 )
+				return; // clipspace
 			var sprite = _gSprite;
 			if( islive !== -1 )
 			{
@@ -156,7 +169,7 @@ var enemy = function( killed, intersectHit, _debug ){
 			{
 				if( intersectHit( x, y, s ) ) // if this enemy is currently hit by a laser
 					wasHit( mark ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
-				if( _debug !== undefined )
+				if( debugmode )
 				{
 					// draw a little helper circle if we are debugging
 					// this b0rks on the death animation but whatev.
