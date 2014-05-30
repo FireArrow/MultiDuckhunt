@@ -53,7 +53,7 @@ var restartButton = function( isHitRect, restartFunction ) {
             context.strokeStyle = "white";
             context.rect( 295, height/2 + 170, 200, 40);
             context.stroke();
-            if( isHitRect(width / 2 - 10, height/2 + 170, 200, 40) ) {
+            if( isHitRect( 295, height/2 + 170, 200, 40) ) {
                 restartFunction();
             }
         }
@@ -102,13 +102,13 @@ var enemy = function( killed, intersectHit, debugmode ){
 		timeoffset = Math.random()*1500;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
-		position = new Vec([(Math.random()-0.5)*3000,
-					(Math.random()-0.5)*3000,
-						Math.random()*9000 + 9000]);
+		position = new Vec([(Math.random()-0.5)*300,
+					(Math.random()-0.5)*300,
+						Math.random()*900 + 900]);
 		// reset starting velocity to be almost directed towards the camera
-		velocity = new Vec([(Math.random()-0.5)*0.7,
-						(Math.random()-0.5)*0.7,
-						(-1)*(4+Math.random())]);
+		velocity = new Vec([(Math.random()-0.5)*0.07,
+						(Math.random()-0.5)*0.07,
+						(-1)*(0.4+(Math.random()*0.1))]);
 		sidevelocity = new Vec([
 				velocity.x()*5,
 				 velocity.y()*5,
