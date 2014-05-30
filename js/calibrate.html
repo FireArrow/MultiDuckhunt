@@ -17,14 +17,12 @@
 		window.onload = function(){
 			var _server = makeServerState();
 			_engine = makeEngine(document.getElementById("example"));
-			var X = new Image();
-			X.src = "X.png";
-			var c = calibrateAction( _server.getState, X, function( id, calibrator ) {
+			
+			var c = makeCoordinateTransformer(_server.getState);
 				_engine.remove( id );
-				_engine.add( demo( calibrator ) );
-				_engine.add( dotcounter( function(){return calibrator.getAll().length}));
-			});
-			_engine.add( c );
+				_engine.add( demo( c ) );
+				_engine.add( dotcounter( function(){return c.getAll().length}));
+			
 			_engine.start();
 		};
 	</script>
