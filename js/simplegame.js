@@ -1,5 +1,5 @@
-var _debug = undefined; // if true, game will read mouse input and draw some extra stuff
 var makeGame = function() {
+	var _debug;
 	var server = makeServerState();
 	var engine = makeEngine(document.getElementById("example"));
 	engine.start();
@@ -7,7 +7,6 @@ var makeGame = function() {
 	var maxTime = 50*1000;
 	var score = 0;
 	var mousehit = [];
-	var debugAmmo = 1;
 	var finished = false;
 	
 	// feature: if clicking game over screen, the game will restart. No recalibration neccesary.
@@ -18,11 +17,10 @@ var makeGame = function() {
 //		}
 //	});
 
-	if( _debug )
+	if( _debug !== undefined )
 	{
 		// if debug, replace server coordinates with mouse coordinates.
 		$("#example").mousedown(function(e){
-			debugAmmo -= 0.03;
 			var x = e.pageX - this.offsetLeft;
 			var y = e.pageY - this.offsetTop;
 			mousehit = [{x:x,y:y}];
@@ -91,12 +89,6 @@ var makeGame = function() {
 		var viewport = makeView(); // The enemies are drawn onto a 2d plane based on 3d coordinates
 		var startTime = new Date().getTime();
 		
-		// add the 2d gui stuff directly to engine	
-		engine.add( bar( "Ammo", {x:50,y:30},{x:30,y:200},"green",function(){
-				if( _debug )
-					return debugAmmo;
-			return server.getAmmo()/server.getMaxAmmo();}
-		) );
 		engine.add( bar( "Time", {x:90,y:30},{x:30,y:200},"blue",function(){
 			var timeTaken = new Date().getTime() - startTime ;
 			var timeRemaining = maxTime - timeTaken;
@@ -147,7 +139,7 @@ var makeGame = function() {
 		// initialize 10 enemies and add them to the draw-buffer
 		for( var i = 0; i < 10; i++ )
 		{
-			drawables.push( enemy( function(){score++;}, hitCheck ) );
+			drawables.push( enemy( function(){score++;}, hitCheck, _debug ) );
 		}
 
 		// add the enemy draw function to the engine
@@ -159,26 +151,22 @@ var makeGame = function() {
 	var reset = function() {
         score = 0;
 		engine.clear(); // clear drawables
-		server.reload(); // reload ammo (not currently used)
 		setTimeout( start, 1000 ); // start game
 	};
 
 	return {
-		// called from html, game must start with recalibration sequence the first time
-		recalibrate: function() {
+		// called from html, entry point for game
+		start: function() {
 			engine.clear();
 			
-			// create calibration sequence
-			var c = calibrateAction( server.getState, _X, function( id, c ) {
-				//This callback will be called when calibration is done
-				calibrator = c; // update the calibrator object
-				reset(); // start the game
-			});
-			// and add it to engine
-			engine.add( c );
+			calibrator = makeCoordinateTransformer(server.getState);
+			reset();
 		},
 		
 		// just in case
-		reset: reset
+		reset: reset,
+		setDebug: function(){
+			_debug = true;
+		}		
 	}
 };
