@@ -95,6 +95,7 @@ var makeGame = function(debugmode) {
         // this will probably have to be changed so that enemies behind other enemies dont register as 'hit'
         var hitCheck = function( x, y, s )
         {
+			var rad = s/2;
 //            x = x + s / 2;
 //            y = y + s / 2;
             var hitcoords =  _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
@@ -102,8 +103,8 @@ var makeGame = function(debugmode) {
             {
                 var dx = hitcoords[i].x - x;
                 var dy = hitcoords[i].y - y;
-                var distsquaresum =  dx*dx + dy*dy;
-                if( distsquaresum < s*s )
+                var dist =  dx*dx + dy*dy ;
+                if( dist < rad*rad )
                     return true;
             }
             return false;

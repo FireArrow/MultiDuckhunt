@@ -102,9 +102,9 @@ var enemy = function( killed, intersectHit, debugmode ){
 		timeoffset = Math.random()*1500;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
-		position = new Vec([(Math.random()-0.5)*300,
-					(Math.random()-0.5)*300,
-						Math.random()*900 + 900]);
+		position = new Vec([(Math.random()-0.5)*800,
+					(Math.random()-0.5)*800,
+						Math.random()*1000 + 1000]);
 		// reset starting velocity to be almost directed towards the camera
 		velocity = new Vec([(Math.random()-0.5)*0.07,
 						(Math.random()-0.5)*0.07,
@@ -169,7 +169,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 		},
 		draw: function( context, x, y, s, mark ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
-			if( position.z() > 9000 )
+			if( position.z() > 1000 )
 				return; // clipspace
 			var sprite = selectSprite();
 			if( islive === -1 )//if this enemy still lives
