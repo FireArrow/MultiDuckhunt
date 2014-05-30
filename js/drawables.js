@@ -102,7 +102,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 		islive = -1;
 		health=100;
 		viewporttarget = undefined;
-		armor = Math.random()*6+6;
+		armor = Math.random()*8+8;
 		timeoffset = Math.random()*1500;
 		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
@@ -110,9 +110,9 @@ var enemy = function( killed, intersectHit, debugmode ){
 					(Math.random()-0.5)*800,
 						Math.random()*6000 + 3000]);
 		// reset starting velocity to be almost directed towards the camera
-		velocity = new Vec([(Math.random()-0.5)*0.1,
-						(Math.random()-0.5)*0.1,
-						(-1)*(0.8+(Math.random()*0.1))]);
+		velocity = new Vec([(Math.random()-0.5)*0.3,
+						(Math.random()-0.5)*0.3,
+						(-1)*(1.2+(Math.random()*0.4))]);
 		sidevelocity = new Vec([
 				velocity.x()*5,
 				 velocity.y()*5,
@@ -183,7 +183,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 					viewporttarget = makeDashVector();
 				position = position.add( viewporttarget.mul( delta ) );
 			}
-			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 == 0 )
+			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 !== 0 )
 				position = position.add( velocity.mul( delta ) );
 			else
 				position = position.add( sidevelocity.mul( delta ) );
