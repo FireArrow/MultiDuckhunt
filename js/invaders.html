@@ -25,16 +25,8 @@
 
 	<script type="text/javascript">
 		window.onload = function(){
-			if( window.location.hash === "#debug" )
-			{
-				var game = makeGame(true);
-				game.start();
-			}
-			else
-			{
-				var game = makeGame();
-				game.start();
-			}
+			var game = makeGame(window.location.hash === "#debug");
+			game.start();
 		};
 		
 	</script>
