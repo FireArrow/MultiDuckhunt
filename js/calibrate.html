@@ -19,7 +19,7 @@
 			_engine = makeEngine(document.getElementById("example"));
 			
 			var c = makeCoordinateTransformer(_server.getState);
-				_engine.remove( id );
+
 				_engine.add( demo( c ) );
 				_engine.add( dotcounter( function(){return c.getAll().length}));
 			
