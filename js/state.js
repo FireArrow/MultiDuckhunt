@@ -7,7 +7,6 @@ var makeServerState = function(debugmode)
     var highscore_callback;
     var _current_server_state = [];
 	var _debug = debugmode || false;
-	if( !_debug )
 		(function w_req(){ // this is a self-executing function. it will initiate schedule itself to run again after the ajax call has returned
         ws = new WebSocket("ws://"+window.location.hostname+":9999")
         ws.onmessage = function(data){

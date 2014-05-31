@@ -282,7 +282,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 					if( hitbox !== undefined )
 					{
 						context.setTransform(1, 0, 0, 1, 0, 0); // reset the html canvas context transform matrix to move the image a bit
-						context.fillStyle = "rgba(0,255,0,100)";
+						context.fillStyle = "rgba(100,100,200,100)";
 						context.beginPath();
 						
 						context.arc( hitbox.x, hitbox.y, hitbox.s/2, 0, Math.PI*2, true);
@@ -324,11 +324,13 @@ var demo = function( calibrator )
 	return {
 		id: "demo",
 		draw: function( context, width, height, mark, keys ) {
+            context.setTransform(1, 0, 0, 1, 0, 0); // reset the html canvas context transform matrix to move the image a bit
 			// draw one little circle for every reported lightpoint from server
 			context.fillStyle = "#99F";
 			var coords = calibrator.getAll();
 			for( var i = 0; i < coords.length; i++ )
 			{
+                context.beginPath();
 				context.arc( coords[i].x, coords[i].y, 4, 0, Math.PI*2, true);
 				context.fill();
 			}

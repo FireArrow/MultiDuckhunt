@@ -96,7 +96,7 @@ var makeGame = function(debugmode) {
         var hitCheck = function( x, y, s )
         {
 			var rad = s/2;
-            var hitcoords =  _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
+            var hitcoords = calibrator.getAll(); // gets all transformed screen coordinates
             for( var i in hitcoords )
             {
                 var dx = hitcoords[i].x - x;
@@ -174,6 +174,7 @@ var makeGame = function(debugmode) {
 	var reset = function() {
         score = 0;
 		engine.clear(); // clear drawables
+        //if(_debug) engine.add( demo( calibrator ));
 		setTimeout( start, 1000 ); // start game
 	};
 
