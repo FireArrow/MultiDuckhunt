@@ -130,16 +130,40 @@ var makeGame = function(debugmode) {
 			lastmark = mark;
 		};
 		
+		var eCount = 0;
+		function makeEnemy()
+		{
+			return enemy( function(points,x,y,z)
+			{
+				var deathid = "d"+eCount;
+				eCount++;
+				score+=points;
+				
+				var px = 15;
+				if( z > 2000 )
+					px = 11;
+				
+				engine.add({draw:function( context ){
+					context.fillStyle = "white";
+					context.font = "bold "+px+"px Consolas, monospace";
+					context.fillText( "+"+points, x, y );
+
+				},id:deathid})
+				
+				setTimeout( function(){engine.remove(deathid)}, 1000);
+			}, hitCheck, _debug );
+		};
+		
 		// initialize enemies and add them to the draw-buffer
 		for( var i = 0; i < enemycount; i++ )
 		{
-			drawables.push( enemy( function(points){score+=points;}, hitCheck, _debug ) );
+			drawables.push( makeEnemy() );
 		}
 		(function add_enemy(){
 			if( enemycount > 30 || finished )
 				return;
 			
-			drawables.push( enemy( function(points){score+=points;}, hitCheck, _debug ) );
+			drawables.push(makeEnemy() );
 			enemycount++;
 			setTimeout( add_enemy, 600 );
 		})();

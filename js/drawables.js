@@ -146,11 +146,11 @@ var enemy = function( killed, intersectHit, debugmode ){
 
 		};
 	reset();
-	var wasHit = function(mark){
+	var wasHit = function(mark,x,y){
 		// what to do when we are hit
 		if( health <= 0 )
 		{
-			killed(points[enemyid]);
+			killed(points[enemyid],x,y,position.z());
 			islive = mark;
 			// transform velocity to be more toward the side than toward the camera
 			setCurrent(
@@ -267,7 +267,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 			if( islive === -1 )//if this enemy still lives
 			{
 				if( intersectHit( x, y, s ) ) // if this enemy is currently hit by a laser
-					wasHit( mark ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
+					wasHit( mark, x,y ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
 				if( debugmode )
 				{
 					// draw a little helper circle if we are debugging
