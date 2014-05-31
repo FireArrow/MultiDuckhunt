@@ -87,7 +87,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 	};
 	
 	var enemyid = 0; // which enemy sprite should be drawn?
-	var meakness = [7, 9, 12];
+	var meakness = [10, 13, 15];
 	var points = [7, 3, 1];
 	var imgoffsets = [0,120,250];//data used to navigate the single-image sprite
 	var imgwidths = [110,120,80];// 
@@ -164,11 +164,11 @@ var enemy = function( killed, intersectHit, debugmode ){
 		if( islive !== -1 )
 			return _deadSprite;
 			
-		if( health <= 60 )
+		if( health <= 45 )
 			return _5Sprite;
-		if( health <= 70 )
+		if( health <= 60 )
 			return _4Sprite;
-		if( health <= 80 )
+		if( health <= 75 )
 			return _3Sprite;
 		if( health <= 90 )
 			return _2Sprite;
