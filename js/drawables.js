@@ -74,7 +74,7 @@ var dotcounter = function( counter ) {
 
 // this is one enemy
 // this class is not added directly to the rendering engine, it should first go through the game engine
-var enemy = function( killed, intersectHit, debugmode ){
+var enemy = function( killed, intersectHit, viewport, debugmode ){
 	//params:
 	// killed, callback function, we call killed when this enemy is killed
 	// intersectHit, callbackfunction, we use this to check if this enemy is currently hit by laser
@@ -87,8 +87,8 @@ var enemy = function( killed, intersectHit, debugmode ){
 	};
 	
 	var enemyid = 0; // which enemy sprite should be drawn?
-	var meakness = [10, 13, 15];
-	var points = [7, 3, 1];
+	var meakness = [13, 10, 15];
+	var points = [3, 7, 1];
 	var imgoffsets = [0,120,250];//data used to navigate the single-image sprite
 	var imgwidths = [110,120,80];// 
 	var animation = [0,90]; // the offset in the sprite image for the two different animation images
@@ -176,6 +176,14 @@ var enemy = function( killed, intersectHit, debugmode ){
 		return _1Sprite;
 	};
 	
+	var getDelayedHitbox = function(w,h)
+	{
+		var result = undefined;
+		viewport.project(w,h, position.sub( currentVelocity.mul(100) ), _size, function(x,y,size){
+			result = {x:x,y:y,s:size};
+		});
+		return result;
+	};
 	
 	var mergeVelocity = function()
 	{
@@ -261,7 +269,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 				
 			position = position.add( currentVelocity.mul( delta ) );
 		},
-		draw: function( context, x, y, s, mark ) {
+		draw: function( context, x, y, s, mark, wx, wy ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
 			var sprite = selectSprite();
 			if( islive === -1 )//if this enemy still lives
@@ -270,13 +278,16 @@ var enemy = function( killed, intersectHit, debugmode ){
 					wasHit( mark, x,y ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
 				if( debugmode )
 				{
-					// draw a little helper circle if we are debugging
-					// this b0rks on the death animation but whatev.
-					context.setTransform(1, 0, 0, 1, 0, 0); // reset the html canvas context transform matrix to move the image a bit
-					context.fillStyle = "rgba(0,255,0,100)";
-					context.beginPath();
-					context.arc( x, y, s/2, 0, Math.PI*2, true);
-					context.fill();
+					var hitbox = getDelayedHitbox(wx,wy);
+					if( hitbox !== undefined )
+					{
+						context.setTransform(1, 0, 0, 1, 0, 0); // reset the html canvas context transform matrix to move the image a bit
+						context.fillStyle = "rgba(0,255,0,100)";
+						context.beginPath();
+						
+						context.arc( hitbox.x, hitbox.y, hitbox.s/2, 0, Math.PI*2, true);
+						context.fill();
+					}
 				}
 				context.setTransform(1, 0, 0, 1, -s/2, -s/2); // reset the html canvas context transform matrix to move the image a bit
 				// this is done so that the middle of the image is on x,y
