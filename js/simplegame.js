@@ -76,7 +76,6 @@ var makeGame = function(debugmode) {
         engine.add( restartButton( isHitRect, restartGame ) ); // add a button to restart the game with the laser
     }
 
-// callback for when game starts, this is the MAIN GAME FUNCTION
 	var start = function() {
 		var drawables = []; // keep track of all the enemies on screen.
 		var viewport = makeView(); // The enemies are drawn onto a 2d plane based on 3d coordinates
@@ -97,8 +96,6 @@ var makeGame = function(debugmode) {
         var hitCheck = function( x, y, s )
         {
 			var rad = s/2;
-//            x = x + s / 2;
-//            y = y + s / 2;
             var hitcoords =  _debug ? mousehit : calibrator.getAll(); // gets all transformed screen coordinates
             for( var i in hitcoords )
             {
@@ -126,7 +123,7 @@ var makeGame = function(debugmode) {
 				drawables[d].tick( keys, mark, (mark - lastmark) ); // this moves enemy position and maybe velocity
 			drawables.sort( sortFunction ); // this sorts the drawables array based on how close to the camera enemies are
 			for( var d2 in drawables )
-				viewport.draw( context, width,height, drawables[d2], mark ); // and then use the viewport to draw every enemy
+				viewport.draw( context, width, height, drawables[d2], mark ); // and then use the viewport to draw every enemy
 			lastmark = mark;
 		};
 		
@@ -151,7 +148,7 @@ var makeGame = function(debugmode) {
 				},id:deathid})
 				
 				setTimeout( function(){engine.remove(deathid)}, 1000);
-			}, hitCheck, _debug );
+			}, hitCheck,viewport, _debug );
 		};
 		
 		// initialize enemies and add them to the draw-buffer
