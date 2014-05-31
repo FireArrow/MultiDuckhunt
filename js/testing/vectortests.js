@@ -1,3 +1,17 @@
+	var angleBetween = function(a,b)
+	{
+		var t = a.x()*b.x() + a.y()*b.y() + a.z()*b.z();
+		var n = a.abs() * b.abs();
+		return Math.acos(t/n);
+	};
+
+describe('angles', function(){
+it( 'can be calculated', function(){
+var res = angleBetween(new Vec([2,-3,4]),new Vec([5,2,1]));
+expect( res ).toBeCloseTo(1.296081,0.0001)
+});
+});
+
 describe('given vectors', function(){
 	describe('when subtracting', function(){
 	it('zero vector from 1 results in same vector', function(){

@@ -21,7 +21,7 @@ function makeLog(calibrator)
 			}
 			context.fillStyle = "white";
 			context.font = "12px";
-			context.fillText( "FPS: " + Math.round(fps), 100, 40 );
+			context.fillText( "FPS: " + Math.round(fps), 120, 220 );
 
             var points = calibrator.getAll();
             for(var i in points) {

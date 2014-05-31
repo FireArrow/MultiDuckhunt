@@ -1,9 +1,8 @@
 /*
- * A three dimensional vector.
- * Not modifiable, if you want to change a vector, make a new one.
- */
-function Vec( par )
-{
+* A three dimensional vector.
+* Not mutable, if you want to change a vector, make a new one.
+*/
+function Vec( par ){
 	this._abs = undefined;
 	this.data = par || [0,0,0];
 };
@@ -13,6 +12,33 @@ Vec.prototype.num = function(i){
 	i = Math.round(i);
 	i /= 1000;
 	return i;
+};
+
+Vec.prototype.angle = function( other ){
+	var t = this.data[0]*other.x() + this.data[1]*other.y() + this.data[2]*other.z();
+	var n = this.abs() * other.abs();
+	return Math.acos(t/n);
+};
+
+// return a vector that is this vector rotated around the vector parameter 'around' by theta radians
+Vec.prototype.rotate = function(theta, around){
+	// this is basically the extracted arithmetic of multiplying a series of rotational matrixes with vector ve
+	var cos = Math.cos(theta);
+	var sin = Math.sin(theta);
+	var u = around.x();
+	var v = around.y();
+	var w = around.z();
+	var x = this.data[0];
+	var y = this.data[1];
+	var z = this.data[2];
+	var rx = u*(u*x+v*y+w*z)*(1-cos)+x*cos+(-1*w*y+v*z)*sin;
+	var ry = v*(u*x+v*y+w*z)*(1-cos)+y*cos+(w*x-u*z)*sin;
+	var rz = w*(u*x+v*y+w*z)*(1-cos)+z*cos+(-1*v*x+u*y)*sin;
+	return new Vec([rx,ry,rz]);
+};
+
+Vec.prototype.clone = function(){
+	return new Vec([this.data[0], this.data[1], this.data[2]]);
 };
 
 Vec.prototype.abs = function(){
