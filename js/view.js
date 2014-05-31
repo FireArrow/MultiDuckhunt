@@ -22,7 +22,7 @@ var makeView = function( starting_position, starting_updirection, starting_right
 		project: function( w, h, start, size, action ) {
 			var p = start; // p is vector pointing from viewport to object
 			var ndist = p.dot( n ); // project p onto the viewport normal to get how far away object is along the axis
-			if( ndist > 0 ) // if object should be drawn, (i.e. if distance is positive)
+			if( ndist > -300 ) // if object should be drawn, (i.e. if distance is positive)
 			{
 				var x = p.dot( u ); // project p onto x and y viewport axises
 				var y = p.dot( v ); // these are the actual coordinates in the vector space of object as viewed from viewport

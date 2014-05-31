@@ -8,7 +8,7 @@ var makeGame = function(debugmode) {
 	var score = 0;
 	var mousehit = [];
 	var finished = false;
-	var enemycount = 5;
+	var enemycount = 0;
 
 	// if debug, replace server coordinates with mouse coordinates.
 	if( _debug )

@@ -99,7 +99,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 	var health = 100;
 	var armor = 0;
 	var timeoffset = 0;
-	var turnspeed = 100;
+	var turnspeed = 300;
 	var turnaround = new Vec();
 	
 	var stateMachine = 0;
@@ -130,7 +130,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 		health=100;
 		armor = Math.random()*8+8;
 		timeoffset = Math.random()*1500;
-		_size = 100 + (Math.random()-0.5)*30; // vary enemy size somewhat
+		_size = 100; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
 		position = new Vec([
 			(Math.random()-0.5)*8000,
@@ -139,7 +139,11 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 		]);
 		
 		stateV1 = makeDashVector(
-			new Vec([0,0,1000]),(1.2+(Math.random()*0.4))
+			new Vec([
+                Math.random()*500-250,
+                Math.random()*500-250,
+                Math.random()*600+700]),
+            (1.2+(Math.random()*0.4))
 		);
 		
 		setCurrent( stateV1.clone() );
@@ -208,7 +212,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 		size: function(){ return _size; },
 		tick: function( keys, mark, delta ) {
 			// our game engine calls this one once for every enemy once per frame, before anything is drawn
-			if( islive !== -1 && mark-islive > 2000 || position.z() < -2000 )
+			if( islive !== -1 && mark-islive > 2000 || position.z() < -3000 )
 			{
 				//if we are dead, and have been dead for a little while
 				// or if we are way past the viewport
@@ -232,7 +236,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 					setTarget( makeDashVector( new Vec([0,0,0]), 1 + Math.random()*2 ) );
 				}
 			}
-			else if( position.z() > 700 && position.z() < 1000 )
+/*			else if( position.z() > 700 && position.z() < 1000 )
 			{
 				if( stateMachine !== 1 )
 				{
@@ -244,7 +248,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 					]), 4 + Math.random()*2 ) );
 				}
 			}
-			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 !== 0 )
+*/			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 !== 0 )
 			{
 				if( stateMachine !== 0 )
 				{
@@ -274,7 +278,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			var sprite = selectSprite();
 			if( islive === -1 )//if this enemy still lives
 			{
-				if( intersectHit( x, y, s ) ) // if this enemy is currently hit by a laser
+				if( position.z() < 5000 && intersectHit( x, y, s ) ) // if this enemy is within range and currently hit by a laser
 					wasHit( mark, x,y ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
 				if( debugmode )
 				{
