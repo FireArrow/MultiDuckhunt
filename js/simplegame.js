@@ -173,6 +173,7 @@ var makeGame = function(debugmode) {
 // When resetting game
 	var reset = function() {
         score = 0;
+        enemycount = 0;
 		engine.clear(); // clear drawables
         //if(_debug) engine.add( demo( calibrator ));
 		setTimeout( start, 1000 ); // start game
