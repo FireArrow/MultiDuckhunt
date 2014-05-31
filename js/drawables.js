@@ -154,7 +154,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 			islive = mark;
 			// transform velocity to be more toward the side than toward the camera
 			setCurrent(
-			new Vec([10,0,0]).rotate( Math.random()*2*Math.PI, new Vec([0,0,1]) )
+			new Vec([3,0,0]).rotate( Math.random()*2*Math.PI, new Vec([0,0,1]) )
 			);
 		}
 		health -= meakness[enemyid];
