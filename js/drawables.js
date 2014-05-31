@@ -135,7 +135,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 		position = new Vec([
 			(Math.random()-0.5)*8000,
 			(Math.random()-0.5)*8000,
-			Math.random()*1000 + 5000
+			Math.random()*1000 + 6000
 		]);
 		
 		stateV1 = makeDashVector(
@@ -272,7 +272,7 @@ var enemy = function( killed, intersectHit, debugmode ){
 				{
 					// draw a little helper circle if we are debugging
 					// this b0rks on the death animation but whatev.
-				context.setTransform(1, 0, 0, 1, 0, 0); // reset the html canvas context transform matrix to move the image a bit
+					context.setTransform(1, 0, 0, 1, 0, 0); // reset the html canvas context transform matrix to move the image a bit
 					context.fillStyle = "rgba(0,255,0,100)";
 					context.beginPath();
 					context.arc( x, y, s/2, 0, Math.PI*2, true);
@@ -282,6 +282,16 @@ var enemy = function( killed, intersectHit, debugmode ){
 				// this is done so that the middle of the image is on x,y
 				//then just draw the image
 				context.drawImage(sprite, imgoffsets[enemyid], animation[0], imgwidths[enemyid],animation[1], x, y, s, s);
+
+				if( position.z() > 4000 )
+				{
+					var alpha = (position.z()/2000)-2;
+					context.setTransform(1, 0, 0, 1, 0, 0);
+					context.fillStyle = "rgba(0,0,0,"+alpha+")";
+					context.beginPath();
+					context.arc( x, y, s/1.5, 0, Math.PI*2, true);
+					context.fill();
+				}
 			}
 			else // enemy is dead
 			{

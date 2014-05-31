@@ -8,7 +8,7 @@ var makeGame = function(debugmode) {
 	var score = 0;
 	var mousehit = [];
 	var finished = false;
-	var enemycount = 10;
+	var enemycount = 5;
 
 	// if debug, replace server coordinates with mouse coordinates.
 	if( _debug )
@@ -135,13 +135,13 @@ var makeGame = function(debugmode) {
 		{
 			drawables.push( enemy( function(points){score+=points;}, hitCheck, _debug ) );
 		}
-		(function w_req(){
-			if( enemycount > 25 || finished )
+		(function add_enemy(){
+			if( enemycount > 30 || finished )
 				return;
 			
 			drawables.push( enemy( function(points){score+=points;}, hitCheck, _debug ) );
 			enemycount++;
-			setTimeout( w_req, 1000 );
+			setTimeout( add_enemy, 600 );
 		})();
 
 		// add the enemy draw function to the engine
