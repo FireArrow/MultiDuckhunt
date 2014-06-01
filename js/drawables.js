@@ -278,11 +278,11 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			var sprite = selectSprite();
 			if( islive === -1 )//if this enemy still lives
 			{
-				if( position.z() < 5000 && intersectHit( x, y, s ) ) // if this enemy is within range and currently hit by a laser
+				var hitbox = getDelayedHitbox(wx,wy);
+				if( position.z() < 5000 && intersectHit( hitbox.x || x, hitbox.y || y, hitbox.s || s ) ) // if this enemy is within range and currently hit by a laser
 					wasHit( mark, x,y ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
 				if( debugmode )
 				{
-					var hitbox = getDelayedHitbox(wx,wy);
 					if( hitbox !== undefined )
 					{
 						context.setTransform(1, 0, 0, 1, 0, 0); // reset the html canvas context transform matrix to move the image a bit
