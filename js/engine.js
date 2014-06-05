@@ -19,13 +19,15 @@ function makeLog(calibrator)
 				counter =0;
 				timestamp=new Date().getTime();
 			}
+			context.setTransform(1, 0, 0, 1, 0, 0);
 			context.fillStyle = "white";
 			context.font = "12px";
 			context.fillText( "FPS: " + Math.round(fps), 120, 220 );
 
             var points = calibrator.getAll();
             for(var i in points) {
-                context.fillStyle = "lightgreen";
+                context.setTransform(1, 0, 0, 1, 0, 0);
+				context.fillStyle = "lightgreen";
                 context.arc(points[i].x, points[i].y, 2, 0, Math.PI*2, true);
                 context.fill();
             }
