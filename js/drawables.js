@@ -78,13 +78,6 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 	//params:
 	// killed, callback function, we call killed when this enemy is killed
 	// intersectHit, callbackfunction, we use this to check if this enemy is currently hit by laser
-
-	var makeDashVector = function( apex, multiplier )
-	{
-		var target = apex.sub( position );
-		var norm = target.unit();
-		return norm.mul( multiplier );
-	};
 	
 	var enemyid = 0; // which enemy sprite should be drawn?
 	var meakness = [20, 15, 25];
@@ -99,29 +92,14 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 	var health = 100;
 	var armor = 0;
 	var timeoffset = 0;
-	var turnspeed = 300;
-	var turnaround = new Vec();
-	
+	var target = makeTargeting();
 	var stateMachine = 0;
 	
 	var stateV1 = new Vec();
 	var stateV2 = new Vec();
 	var stateV3 = new Vec();
 	
-	var currentVelocity = new Vec();
-	var targetVelocity = new Vec();
-	var areSame = true;
 	
-	var setTarget = function( v ){
-		areSame = false;
-		targetVelocity = v;
-		turnaround = currentVelocity.unit().cross( targetVelocity.unit() ).unit();
-	};
-	var setCurrent = function( v ){
-		areSame = true;
-		targetVelocity = v;
-		currentVelocity = v;
-	};
 	
 	// function that resets all values
 	var reset = function(){
@@ -129,7 +107,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 		islive = -1;
 		health=100;
 		armor = Math.random()*8+8;
-		timeoffset = Math.random()*1500;
+		timeoffset = Math.random()*15000;
 		_size = 100; // vary enemy size somewhat
 		// reset starting position to a random place somwhere in the distance
 		position = new Vec([
@@ -138,15 +116,16 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			Math.random()*1000 + 6000
 		]);
 		
-		stateV1 = makeDashVector(
+		stateV1 = _makeDashVector(
 			new Vec([
                 Math.random()*500-250,
                 Math.random()*500-250,
                 Math.random()*600+700]),
+				position,
             (1.2+(Math.random()*0.4))
 		);
 		
-		setCurrent( stateV1.clone() );
+		target.reset( stateV1.clone() );
 
 		};
 	reset();
@@ -157,7 +136,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			killed(points[enemyid],x,y,position.z());
 			islive = mark;
 			// transform velocity to be more toward the side than toward the camera
-			setCurrent(
+			target.reset(
 			new Vec([1,0,0]).rotate( Math.random()*2*Math.PI, new Vec([0,0,1]) )
 			);
 		}
@@ -183,28 +162,12 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 	var getDelayedHitbox = function(w,h)
 	{
 		var result = undefined;
-		viewport.project(w,h, position.sub( currentVelocity.mul(200) ), _size, function(x,y,size){
+		viewport.project(w,h, position.sub( target.velocity().mul(200) ), _size, function(x,y,size){
 			result = {x:x,y:y,s:size};
 		});
 		return result;
 	};
 	
-	var mergeVelocity = function()
-	{
-		if( areSame )
-			return;
-		var diff = currentVelocity.angle(targetVelocity);
-		if(diff < 0.1)
-		{
-			currentVelocity = targetVelocity;
-			areSame = true;
-			return;
-		}
-		
-		currentVelocity = currentVelocity.rotate( diff/2, turnaround );
-	};
-	
-	var turncounter=0;
 
 	return {
 		id:"enemy",
@@ -219,11 +182,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 				reset(mark);
 			}
 
-			if( turncounter++ > turnspeed )
-			{
-				turncounter = 0;
-				mergeVelocity();
-			}
+			target.merge();
 			
 			// this switches between the two animation states.
 			animation = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
@@ -233,7 +192,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 				if( stateMachine !== 3 )
 				{
 					stateMachine = 3;
-		//			setTarget( makeDashVector( new Vec([0,0,0]), 1 + Math.random()*2 ) );
+		//			target.target( _makeDashVector( new Vec([0,0,0]),position, 1 + Math.random()*2 ) );
 				}
 			}
 			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 !== 0 )
@@ -241,7 +200,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 				if( stateMachine !== 0 )
 				{
 					stateMachine = 0;
-			//		setTarget( stateV1 );
+			//		target.target( stateV1 );
 				}
 			}
 			else
@@ -255,11 +214,11 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 						Math.random()-0.5,
 						Math.random()-0.5
 						]);
-					setTarget( currentVelocity.unit().rotate( 1.5707, r.unit() ).unit().mul( Math.random() *3 +2 ) );
+					target.target( target.velocity().unit().rotate( 1.0707, r.unit() ).unit().mul( Math.random() *1 +.5 ) );
 				}
 			}
 				
-			position = position.add( currentVelocity.mul( delta ) );
+			position = position.add( target.velocity().mul( delta ) );
 		},
 		draw: function( context, x, y, s, mark, wx, wy ) {
 			// draw one enemy, the game engine calculates x and y screen coordinates, and image size for us
@@ -267,7 +226,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			if( islive === -1 )//if this enemy still lives
 			{
 				var hitbox = getDelayedHitbox(wx,wy);
-				if( position.z() < 5000 && intersectHit( hitbox.x || x, hitbox.y || y, hitbox.s || s ) ) // if this enemy is within range and currently hit by a laser
+				if( position.z() < 5000 && hitbox !== undefined && intersectHit( hitbox.x || x, hitbox.y || y, s ) ) // if this enemy is within range and currently hit by a laser
 					wasHit( mark, x,y ); // report it (then keep rendering, the state will be updated when the next frame is drawn)
 				if( debugmode )
 				{
@@ -326,6 +285,140 @@ var demo = function( calibrator )
 				context.arc( coords[i].x, coords[i].y, 4, 0, Math.PI*2, true);
 				context.fill();
 			}
+		}
+	};
+};
+
+function makeShip()
+{
+	var counter = 0;
+	var timestamp = new Date().getTime();
+	var fps = 0;
+	return {
+		id: "log",
+		draw: function(context, width, height, mark, pressedkeys) {
+		
+			context.setTransform(1, 0, 0, 1, 0, 0); 
+				context.drawImage(_shipSprite, latestCoords.x-17, latestCoords.y-25, 35, 50 );
+		}
+	};
+}
+
+
+
+var homingEnemy = function( ow, intersectHit, viewport, getLatestCoords ){
+
+	
+	var enemyid = 0; // which enemy sprite should be drawn?
+	var meakness = [20, 15, 25];
+	var points = [3, 7, 1];
+	var imgoffsets = [0,120,250];//data used to navigate the single-image sprite
+	var imgwidths = [110,120,80];// 
+	var animation = [0,90]; // the offset in the sprite image for the two different animation images
+	var islive = -1; // timestamp for when enemy was killed
+	var angle = 0; // current angle of rotation (used during death animation)
+	var _size = 100;
+	var position = new Vec(); // our position in a three dimensional vector room
+	var health = 100;
+	var armor = 0;
+	var timeoffset = 0;
+
+	
+	var stateMachine = 0;
+	var target = makeTargeting();
+
+	
+	var setToPointer = function()
+	{
+		var c = getLatestCoords();
+		var x = _inverseTransform( c.x, 1000, 0.5, viewport.width() )
+		var y = _inverseTransform( c.y, 1000, 0.5, viewport.height() )
+		if( x > 4000 || y > 4000 )
+			return;
+		target.target( _makeDashVector( new Vec([x,y, 1000]),position,1 ));
+	}
+	
+	// function that resets all values
+	var reset = function(){
+		enemyid = Math.floor( Math.random() * 3 );
+		islive = -1;
+		health=100;
+		armor = Math.random()*8+8;
+		timeoffset = Math.random()*15000;
+		_size = 100; // vary enemy size somewhat
+		// reset starting position to a random place somwhere in the distance
+		position = new Vec([
+			(Math.random()-0.5)*8000,
+			(Math.random()-0.5)*8000,
+			Math.random()*1000 + 6000
+		]);
+		target.reset( _makeDashVector( new Vec([0,0, 1000]),position,1 ));
+		
+		setToPointer();
+	};
+	
+	reset();
+	
+	return {
+		id:"enemy",
+		pos: function(){ return position;},
+		size: function(){ return _size; },
+		tick: function( keys, mark, delta ) {
+			// our game engine calls this one once for every enemy once per frame, before anything is drawn
+			if( islive !== -1 && mark-islive > 6000 || position.z() < -3000 )
+			{
+				//if we are dead, and have been dead for a little while
+				// or if we are way past the viewport
+				reset(mark);
+			}
+
+			target.merge();
+			
+			// this switches between the two animation states.
+			animation = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
+			
+		if( Math.floor( (mark+timeoffset) / 1000 ) % 10 !== 0 )
+			{
+				
+					setToPointer();
+		
+			}
+			else
+			{
+				if( stateMachine !== 2 )
+				{
+					stateMachine = 2;
+					
+					var r = new Vec([
+						Math.random()-0.5,
+						Math.random()-0.5,
+						Math.random()-0.5
+						]);
+					target.target( target.velocity().unit().rotate( 1.5707, r.unit() ).unit().mul( Math.random() *3 +2 ) );
+				}
+			}
+				
+			position = position.add( target.velocity().mul( delta ) );
+		},
+		draw: function( context, x, y, s, mark, wx, wy ) {
+		
+		
+				if( position.z() < 5000 && intersectHit(  x,  y, s ) ) 
+					ow( mark, x,y );
+
+				context.setTransform(1, 0, 0, 1, -s/2, -s/2); 
+				context.drawImage(_1Sprite, imgoffsets[enemyid], animation[0], imgwidths[enemyid],animation[1], x, y, s, s);
+
+				if( position.z() > 4000 )
+				{
+					var alpha = (position.z()/2000)-2;
+					context.setTransform(1, 0, 0, 1, 0, 0);
+					context.fillStyle = "rgba(0,0,0,"+alpha+")";
+					context.beginPath();
+					context.arc( x, y, s/1.5, 0, Math.PI*2, true);
+					context.fill();
+				}
+
 		}
 	};
 };
