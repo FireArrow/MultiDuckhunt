@@ -87,7 +87,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 	};
 	
 	var enemyid = 0; // which enemy sprite should be drawn?
-	var meakness = [13, 10, 15];
+	var meakness = [20, 15, 25];
 	var points = [3, 7, 1];
 	var imgoffsets = [0,120,250];//data used to navigate the single-image sprite
 	var imgwidths = [110,120,80];// 
@@ -158,7 +158,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			islive = mark;
 			// transform velocity to be more toward the side than toward the camera
 			setCurrent(
-			new Vec([3,0,0]).rotate( Math.random()*2*Math.PI, new Vec([0,0,1]) )
+			new Vec([1,0,0]).rotate( Math.random()*2*Math.PI, new Vec([0,0,1]) )
 			);
 		}
 		health -= meakness[enemyid];
@@ -168,11 +168,11 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 		if( islive !== -1 )
 			return _deadSprite;
 			
-		if( health <= 45 )
+		if( health <= 30 )
 			return _5Sprite;
-		if( health <= 60 )
+		if( health <= 45 )
 			return _4Sprite;
-		if( health <= 75 )
+		if( health <= 70 )
 			return _3Sprite;
 		if( health <= 90 )
 			return _2Sprite;
@@ -183,7 +183,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 	var getDelayedHitbox = function(w,h)
 	{
 		var result = undefined;
-		viewport.project(w,h, position.sub( currentVelocity.mul(100) ), _size, function(x,y,size){
+		viewport.project(w,h, position.sub( currentVelocity.mul(200) ), _size, function(x,y,size){
 			result = {x:x,y:y,s:size};
 		});
 		return result;
@@ -212,7 +212,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 		size: function(){ return _size; },
 		tick: function( keys, mark, delta ) {
 			// our game engine calls this one once for every enemy once per frame, before anything is drawn
-			if( islive !== -1 && mark-islive > 2000 || position.z() < -3000 )
+			if( islive !== -1 && mark-islive > 6000 || position.z() < -3000 )
 			{
 				//if we are dead, and have been dead for a little while
 				// or if we are way past the viewport
@@ -228,32 +228,20 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			// this switches between the two animation states.
 			animation = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
 			// move our position a little bit, based on how much time has passed since the last frame
-			if( position.z() > 2000 && position.z() < 4000 )
+			if( position.z() > 4000 && position.z() < 10000 )
 			{
 				if( stateMachine !== 3 )
 				{
 					stateMachine = 3;
-					setTarget( makeDashVector( new Vec([0,0,0]), 1 + Math.random()*2 ) );
+		//			setTarget( makeDashVector( new Vec([0,0,0]), 1 + Math.random()*2 ) );
 				}
 			}
-/*			else if( position.z() > 700 && position.z() < 1000 )
-			{
-				if( stateMachine !== 1 )
-				{
-					stateMachine = 1;
-					setTarget( makeDashVector( new Vec([
-						Math.random()*100 - 50,
-						Math.random()*100 - 50,
-						Math.random()*100 + 500
-					]), 4 + Math.random()*2 ) );
-				}
-			}
-*/			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 !== 0 )
+			else if( Math.floor( (mark+timeoffset) / 1000 ) % 3 !== 0 )
 			{
 				if( stateMachine !== 0 )
 				{
 					stateMachine = 0;
-					setTarget( stateV1 );
+			//		setTarget( stateV1 );
 				}
 			}
 			else
@@ -311,7 +299,7 @@ var enemy = function( killed, intersectHit, viewport, debugmode ){
 			else // enemy is dead
 			{
 				//update rotation animation
-				angle+=0.1;
+				angle+=0.3;
 				var sin = Math.sin(angle);
 				var cos = Math.cos(angle);
 				context.setTransform( cos, sin, -sin, cos, x, y ); // set transform matrix to rotate image and move it to x,y

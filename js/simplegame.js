@@ -8,7 +8,7 @@ var makeGame = function(debugmode) {
 	var score = 0;
 	var mousehit = [];
 	var finished = false;
-	var enemycount = 0;
+	var enemycount = 40;
 
 	// if debug, replace server coordinates with mouse coordinates.
 	if( _debug )
@@ -96,7 +96,7 @@ var makeGame = function(debugmode) {
         var hitCheck = function( x, y, s )
         {
 			var rad = s/2;
-            var hitcoords = calibrator.getAll(); // gets all transformed screen coordinates
+            var hitcoords = calibrator.getAll().concat(mousehit); // gets all transformed screen coordinates
             for( var i in hitcoords )
             {
                 var dx = hitcoords[i].x - x;
@@ -112,8 +112,8 @@ var makeGame = function(debugmode) {
 		// we want stuff farther away from viewport to be draw first
 		// otherwise they will be on top of things closer to the camera, and that is b0rk
 		var sortFunction = function(a,b){
-			var v1 = b.pos().abs();
-			var v2 = a.pos().abs();
+			var v1 = b.pos().z();
+			var v2 = a.pos().z();
 			return v1 - v2;
 		};
 
@@ -157,7 +157,7 @@ var makeGame = function(debugmode) {
 			drawables.push( makeEnemy() );
 		}
 		(function add_enemy(){
-			if( enemycount > 30 || finished )
+			if( enemycount > 100 || finished )
 				return;
 			
 			drawables.push(makeEnemy() );
