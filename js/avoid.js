@@ -20,176 +20,6 @@ function makeShip()
 	};
 }
 
-var enemy2 = function( ow, intersectHit, viewport, debugmode ){
-	var makeDashVector = function( apex, multiplier )
-	{
-		var target = apex.sub( position );
-		var norm = target.unit();
-		return norm.mul( multiplier || 1 );
-	};
-	
-	var enemyid = 0; // which enemy sprite should be drawn?
-	var meakness = [20, 15, 25];
-	var points = [3, 7, 1];
-	var imgoffsets = [0,120,250];//data used to navigate the single-image sprite
-	var imgwidths = [110,120,80];// 
-	var animation = [0,90]; // the offset in the sprite image for the two different animation images
-	var islive = -1; // timestamp for when enemy was killed
-	var angle = 0; // current angle of rotation (used during death animation)
-	var _size = 100;
-	var position = new Vec(); // our position in a three dimensional vector room
-	var health = 100;
-	var armor = 0;
-	var timeoffset = 0;
-	var turnspeed = 300;
-	var turnaround = new Vec();
-	
-	var stateMachine = 0;
-	
-	
-	var currentVelocity = new Vec();
-	var targetVelocity = new Vec();
-	var areSame = true;
-	
-	var setTarget = function( v ){
-		areSame = false;
-		targetVelocity = v;
-		turnaround = currentVelocity.unit().cross( targetVelocity.unit() ).unit();
-	};
-	var setCurrent = function( v ){
-		areSame = true;
-		targetVelocity = v;
-		currentVelocity = v;
-	};
-	
-	var setToPointer = function()
-	{
-	var x = inverseTransform( latestCoords.x, 1000, 0.5, viewport.width() )
-		var y = inverseTransform( latestCoords.y, 1000, 0.5, viewport.height() )
-		if( x > 4000 || y > 4000 )
-			return;
-		setCurrent( makeDashVector( new Vec([x,y, 1000]) ));
-	}
-	
-	// function that resets all values
-	var reset = function(){
-		enemyid = Math.floor( Math.random() * 3 );
-		islive = -1;
-		health=100;
-		armor = Math.random()*8+8;
-		timeoffset = Math.random()*1500;
-		_size = 100; // vary enemy size somewhat
-		// reset starting position to a random place somwhere in the distance
-		position = new Vec([
-			(Math.random()-0.5)*8000,
-			(Math.random()-0.5)*8000,
-			Math.random()*1000 + 6000
-		]);
-		setCurrent( makeDashVector( new Vec([0,0, 1000]) ));
-		
-		setToPointer();
-		
-
-		};
-	reset();
-	
-
-	var getDelayedHitbox = function(w,h)
-	{
-		var result = undefined;
-		viewport.project(w,h, position.sub( currentVelocity.mul(200) ), _size, function(x,y,size){
-			result = {x:x,y:y,s:size};
-		});
-		return result;
-	};
-	
-	var mergeVelocity = function()
-	{
-		if( areSame )
-			return;
-		var diff = currentVelocity.angle(targetVelocity);
-		if(diff < 0.1)
-		{
-			currentVelocity = targetVelocity;
-			areSame = true;
-			return;
-		}
-		
-		currentVelocity = currentVelocity.rotate( diff/2, turnaround );
-	};
-	
-	var turncounter=0;
-
-	return {
-		id:"enemy",
-		pos: function(){ return position;},
-		size: function(){ return _size; },
-		tick: function( keys, mark, delta ) {
-			// our game engine calls this one once for every enemy once per frame, before anything is drawn
-			if( islive !== -1 && mark-islive > 6000 || position.z() < -3000 )
-			{
-				//if we are dead, and have been dead for a little while
-				// or if we are way past the viewport
-				reset(mark);
-			}
-
-			if( turncounter++ > turnspeed )
-			{
-				turncounter = 0;
-				mergeVelocity();
-			}
-			
-			// this switches between the two animation states.
-			animation = ( Math.floor( mark / 1000 ) % 2 == 0) ? [0,90] : [80,90];
-			
-		if( Math.floor( (mark+timeoffset) / 1000 ) % 3 !== 0 )
-			{
-				if( stateMachine !== 0 )
-				{
-					stateMachine = 0;
-					setToPointer();
-				}
-			}
-			else
-			{
-				if( stateMachine !== 2 )
-				{
-					stateMachine = 2;
-					
-					var r = new Vec([
-						Math.random()-0.5,
-						Math.random()-0.5,
-						Math.random()-0.5
-						]);
-					setTarget( currentVelocity.unit().rotate( 1.5707, r.unit() ).unit().mul( Math.random() *3 +2 ) );
-				}
-			}
-				
-			position = position.add( currentVelocity.mul( delta ) );
-		},
-		draw: function( context, x, y, s, mark, wx, wy ) {
-		
-		
-				if( position.z() < 5000 && intersectHit(  x,  y, s ) ) 
-					ow( mark, x,y );
-
-				context.setTransform(1, 0, 0, 1, -s/2, -s/2); 
-				context.drawImage(_1Sprite, imgoffsets[enemyid], animation[0], imgwidths[enemyid],animation[1], x, y, s, s);
-
-				if( position.z() > 4000 )
-				{
-					var alpha = (position.z()/2000)-2;
-					context.setTransform(1, 0, 0, 1, 0, 0);
-					context.fillStyle = "rgba(0,0,0,"+alpha+")";
-					context.beginPath();
-					context.arc( x, y, s/1.5, 0, Math.PI*2, true);
-					context.fill();
-				}
-
-		}
-	};
-};
-
 var makeGame = function(debugmode) {
 	var _debug = debugmode || false;
 	var server = makeServerState(_debug);
@@ -209,7 +39,6 @@ var makeGame = function(debugmode) {
 			var y = e.y - this.offsetTop;
 latestCoords.x = x;
 latestCoords.y = y;
-			console.log( x+" ... " + y);
 		}, false);
 		
 	
@@ -240,7 +69,7 @@ latestCoords.y = y;
 		engine.clear(); // clear all drawables from engine
 		engine.pause(); // since the ending screen doesnt change, we can also pause
 
-        engine.add( ending( score ) ); // add the ending screen drawable to engine    
+        engine.add( ending(0) ); // add the ending screen drawable to engine    
         setTimeout( addRestartButton, 2000 );
 		finished=true; // flag that mouse-click should restart
 	};
@@ -306,26 +135,21 @@ latestCoords.y = y;
 		var eCount = 0;
 		function makeEnemy()
 		{
-			return enemy2( function(points,x,y,z)
+			return homingEnemy( function(points,x,y,z)
 			{
 				var deathid = "d"+eCount;
 				eCount++;
 				health--;
 				
-				var px = 15;
-				if( z > 2000 )
-					px = 11;
-				
 				engine.add({draw:function( context ){
 					context.setTransform(1, 0, 0, 1, 0, 0);
 					context.fillStyle = "white";
-					context.font = "bold "+px+"px Consolas, monospace";
+					context.font = "bold 15px Consolas, monospace";
 					context.fillText( "-1", x, y );
-
 				},id:deathid})
 				
 				setTimeout( function(){engine.remove(deathid)}, 1000);
-			}, hitCheck,viewport, _debug );
+			}, hitCheck,viewport, function(){return latestCoords;} );
 		};
 		
 		// initialize enemies and add them to the draw-buffer
