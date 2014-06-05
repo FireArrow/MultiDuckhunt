@@ -1,6 +1,8 @@
 // simplified viewport, it cant move
 var makeView = function( starting_position, starting_updirection, starting_rightdirection )
 {
+	var wid = 0;
+	var hei = 0;
 	var pos = starting_position || new Vec();
 	var u = starting_updirection || new Vec([1,0,0]).unit();
 	var v = starting_rightdirection || new Vec([0,1,0]).unit();
@@ -20,6 +22,8 @@ var makeView = function( starting_position, starting_updirection, starting_right
 				} );
 		},
 		project: function( w, h, start, size, action ) {
+			wid=w;
+			hei=h;
 			var p = start; // p is vector pointing from viewport to object
 			var ndist = p.dot( n ); // project p onto the viewport normal to get how far away object is along the axis
 			if( ndist > -300 ) // if object should be drawn, (i.e. if distance is positive)
@@ -37,6 +41,8 @@ var makeView = function( starting_position, starting_updirection, starting_right
 					action( cx, cy, obj_observed_size );
 				}
 			}
-		}
+		},
+		width: function(){return wid},
+		height: function(){return hei}
 	};
 };
