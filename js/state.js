@@ -8,6 +8,8 @@ var makeServerState = function(debugmode)
     var _current_server_state = [];
 	var _debug = debugmode || false;
 		(function w_req(){ // this is a self-executing function. it will initiate schedule itself to run again after the ajax call has returned
+		if( window.location.hostname === undefined || window.location.hostname === "" )
+			return;
         ws = new WebSocket("ws://"+window.location.hostname+":9999")
         ws.onmessage = function(data){
             _current_server_state = [];
